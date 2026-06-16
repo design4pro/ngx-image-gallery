@@ -99,6 +99,7 @@ interface PointerGesture {
 interface GalleryRuntime {
   items: NgxImageGalleryItem[];
   options: NgxImageGalleryOptions;
+  owner: object | null;
   slides: SlideRuntime[];
   activeIndex: number;
   viewport: GallerySize;
@@ -150,6 +151,7 @@ export class NgxImageGalleryService {
     items: readonly NgxImageGalleryItem[],
     index = 0,
     options: NgxImageGalleryOpenOptions = {},
+    owner: object | null = null,
   ): void {
     if (!isPlatformBrowser(this.platformId) || items.length === 0) {
       return;
@@ -176,6 +178,7 @@ export class NgxImageGalleryService {
       const runtime: GalleryRuntime = {
         items: galleryItems,
         options: mergedOptions,
+        owner,
         slides,
         activeIndex,
         viewport: this.getViewportSize(),
@@ -229,6 +232,12 @@ export class NgxImageGalleryService {
     }
 
     window.setTimeout(finish, ANIMATION_DURATION_MS);
+  }
+
+  closeOwnedBy(owner: object, animate = true): void {
+    if (this.runtime?.owner === owner) {
+      this.close(animate);
+    }
   }
 
   next(): void {

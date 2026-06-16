@@ -1,4 +1,4 @@
-import { Directive, ElementRef, inject, input } from '@angular/core';
+import { Directive, ElementRef, OnDestroy, inject, input } from '@angular/core';
 import { NgxImageGalleryService } from './ngx-image-gallery.service';
 import type { NgxImageGalleryItem, NgxImageGalleryOpenOptions } from './gallery-types';
 import type { NgxImageGalleryItemDirective } from './ngx-image-gallery-item.directive';
@@ -9,9 +9,10 @@ import type { NgxImageGalleryLightboxDirective } from './ngx-image-gallery-light
   standalone: true,
   exportAs: 'ngxImageGallery',
 })
-export class NgxImageGalleryDirective {
+export class NgxImageGalleryDirective implements OnDestroy {
   private readonly elementRef = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly gallery = inject(NgxImageGalleryService);
+  private readonly owner = {};
   private readonly itemDirectives: NgxImageGalleryItemDirective[] = [];
   private lightboxDirective: NgxImageGalleryLightboxDirective | null = null;
 
@@ -40,18 +41,29 @@ export class NgxImageGalleryDirective {
     }
   }
 
+  ngOnDestroy(): void {
+    this.gallery.closeOwnedBy(this.owner, false);
+    this.itemDirectives.length = 0;
+    this.lightboxDirective = null;
+  }
+
   open(index = 0): void {
     const items = this.getItems();
     if (items.length === 0) {
       return;
     }
 
-    this.gallery.open(items, index, {
-      ...this.getOptions(),
-      ...this.getLightboxOptions(),
-      originElement: this.itemDirectives[index]?.originElement ?? this.elementRef.nativeElement,
-      originElements: this.itemDirectives.map((item) => item.originElement),
-    });
+    this.gallery.open(
+      items,
+      index,
+      {
+        ...this.getOptions(),
+        ...this.getLightboxOptions(),
+        originElement: this.itemDirectives[index]?.originElement ?? this.elementRef.nativeElement,
+        originElements: this.itemDirectives.map((item) => item.originElement),
+      },
+      this.owner,
+    );
   }
 
   openItem(item: NgxImageGalleryItemDirective, event?: MouseEvent): void {
@@ -61,12 +73,17 @@ export class NgxImageGalleryDirective {
     }
 
     event?.preventDefault();
-    this.gallery.open(this.getItems(), index, {
-      ...this.getOptions(),
-      ...this.getLightboxOptions(),
-      originElement: item.originElement,
-      originElements: this.itemDirectives.map((registeredItem) => registeredItem.originElement),
-    });
+    this.gallery.open(
+      this.getItems(),
+      index,
+      {
+        ...this.getOptions(),
+        ...this.getLightboxOptions(),
+        originElement: item.originElement,
+        originElements: this.itemDirectives.map((registeredItem) => registeredItem.originElement),
+      },
+      this.owner,
+    );
   }
 
   private getItems(): NgxImageGalleryItem[] {
