@@ -1,5 +1,13 @@
 import { DOCUMENT, isPlatformBrowser } from '@angular/common';
-import { Injectable, NgZone, PLATFORM_ID, computed, inject, signal } from '@angular/core';
+import {
+  Injectable,
+  NgZone,
+  PLATFORM_ID,
+  computed,
+  inject,
+  signal,
+  type EmbeddedViewRef,
+} from '@angular/core';
 import {
   calculateZoomBounds,
   calculateZoomPanForPoint,
@@ -21,7 +29,9 @@ import { GALLERY_STYLE_ID, GALLERY_STYLES } from './gallery-styles';
 import {
   DEFAULT_NGX_IMAGE_GALLERY_OPTIONS,
   NGX_IMAGE_GALLERY_OPTIONS,
+  type NgxImageGalleryClassValue,
   type NgxImageGalleryItem,
+  type NgxImageGalleryLightboxContext,
   type NgxImageGalleryOpenOptions,
   type NgxImageGalleryOptions,
   type NgxImageGalleryState,
@@ -59,12 +69,19 @@ interface OverlayElements {
   stage: HTMLDivElement;
   track: HTMLDivElement;
   ui: HTMLDivElement;
+  defaultUi: HTMLDivElement;
+  customUi: HTMLDivElement;
   closeButton: HTMLButtonElement;
   prevButton: HTMLButtonElement;
   nextButton: HTMLButtonElement;
   counter: HTMLDivElement;
   loading: HTMLDivElement;
   error: HTMLDivElement;
+}
+
+interface CustomLightboxRuntime {
+  viewRef: EmbeddedViewRef<NgxImageGalleryLightboxContext>;
+  context: NgxImageGalleryLightboxContext;
 }
 
 interface PointerGesture {
@@ -94,6 +111,7 @@ interface GalleryRuntime {
   gesture: PointerGesture | null;
   openTimer: number | null;
   mediaFrame: number | null;
+  customLightbox: CustomLightboxRuntime | null;
 }
 
 const ANIMATION_DURATION_MS = 333;
@@ -153,7 +171,7 @@ export class NgxImageGalleryService {
           mergedOptions,
         ),
       );
-      const elements = this.createOverlayElements();
+      const elements = this.createOverlayElements(mergedOptions);
       const runtime: GalleryRuntime = {
         items: galleryItems,
         options: mergedOptions,
@@ -171,7 +189,9 @@ export class NgxImageGalleryService {
         gesture: null,
         openTimer: null,
         mediaFrame: null,
+        customLightbox: null,
       };
+      runtime.customLightbox = this.createCustomLightbox(runtime, options);
 
       this.runtime = runtime;
       this.document.body.appendChild(elements.overlay);
@@ -237,6 +257,11 @@ export class NgxImageGalleryService {
       ...DEFAULT_NGX_IMAGE_GALLERY_OPTIONS,
       ...this.defaultOptions,
       ...options,
+      classes: {
+        ...DEFAULT_NGX_IMAGE_GALLERY_OPTIONS.classes,
+        ...this.defaultOptions.classes,
+        ...options.classes,
+      },
       loadOriginal: 'after-open',
     };
   }
@@ -280,42 +305,77 @@ export class NgxImageGalleryService {
     this.document.head.appendChild(style);
   }
 
-  private createOverlayElements(): OverlayElements {
+  private createOverlayElements(options: NgxImageGalleryOptions): OverlayElements {
     const overlay = this.document.createElement('div');
     overlay.className = 'ngx-image-gallery-overlay';
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-modal', 'true');
+    this.addClassNames(overlay, options.classes.overlay);
 
     const backdrop = this.document.createElement('div');
     backdrop.className = 'ngx-image-gallery-backdrop';
+    this.addClassNames(backdrop, options.classes.backdrop);
 
     const stage = this.document.createElement('div');
     stage.className = 'ngx-image-gallery-stage';
     stage.tabIndex = -1;
+    this.addClassNames(stage, options.classes.stage);
 
     const track = this.document.createElement('div');
     track.className = 'ngx-image-gallery-track';
+    this.addClassNames(track, options.classes.track);
 
     const ui = this.document.createElement('div');
     ui.className = 'ngx-image-gallery-ui';
+    this.addClassNames(ui, options.classes.ui);
 
-    const closeButton = this.createButton('ngx-image-gallery-close', 'Close gallery', '\u00d7');
-    const prevButton = this.createButton('ngx-image-gallery-prev', 'Previous image', '\u2039');
-    const nextButton = this.createButton('ngx-image-gallery-next', 'Next image', '\u203a');
+    const defaultUi = this.document.createElement('div');
+    defaultUi.className = 'ngx-image-gallery-default-ui';
+    this.addClassNames(defaultUi, options.classes.defaultUi);
+
+    const customUi = this.document.createElement('div');
+    customUi.className = 'ngx-image-gallery-custom-ui';
+    this.addClassNames(customUi, options.classes.customUi);
+
+    const closeButton = this.createButton(
+      'ngx-image-gallery-close',
+      'Close gallery',
+      '\u00d7',
+      options.classes.button,
+      options.classes.closeButton,
+    );
+    const prevButton = this.createButton(
+      'ngx-image-gallery-prev',
+      'Previous image',
+      '\u2039',
+      options.classes.button,
+      options.classes.previousButton,
+    );
+    const nextButton = this.createButton(
+      'ngx-image-gallery-next',
+      'Next image',
+      '\u203a',
+      options.classes.button,
+      options.classes.nextButton,
+    );
 
     const counter = this.document.createElement('div');
     counter.className = 'ngx-image-gallery-counter';
     counter.setAttribute('aria-live', 'polite');
+    this.addClassNames(counter, options.classes.counter);
 
     const loading = this.document.createElement('div');
     loading.className = 'ngx-image-gallery-loading';
     loading.textContent = 'Loading image';
+    this.addClassNames(loading, options.classes.loading);
 
     const error = this.document.createElement('div');
     error.className = 'ngx-image-gallery-error';
     error.textContent = 'Image could not be loaded';
+    this.addClassNames(error, options.classes.error);
 
-    ui.append(counter, closeButton, prevButton, nextButton, loading, error);
+    defaultUi.append(counter, closeButton, prevButton, nextButton, loading, error);
+    ui.append(defaultUi, customUi);
     stage.appendChild(track);
     overlay.append(backdrop, stage, ui);
 
@@ -325,6 +385,8 @@ export class NgxImageGalleryService {
       stage,
       track,
       ui,
+      defaultUi,
+      customUi,
       closeButton,
       prevButton,
       nextButton,
@@ -334,13 +396,120 @@ export class NgxImageGalleryService {
     };
   }
 
-  private createButton(className: string, label: string, text: string): HTMLButtonElement {
+  private createButton(
+    className: string,
+    label: string,
+    text: string,
+    ...classValues: NgxImageGalleryClassValue[]
+  ): HTMLButtonElement {
     const button = this.document.createElement('button');
+    const icon = this.document.createElement('span');
     button.type = 'button';
     button.className = `ngx-image-gallery-button ${className}`;
     button.setAttribute('aria-label', label);
-    button.textContent = text;
+    icon.className = 'ngx-image-gallery-button-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = text;
+    button.appendChild(icon);
+    classValues.forEach((classValue) => this.addClassNames(button, classValue));
     return button;
+  }
+
+  private addClassNames(element: HTMLElement, classValue: NgxImageGalleryClassValue): void {
+    if (!classValue) {
+      return;
+    }
+
+    const values = Array.isArray(classValue) ? classValue : [classValue];
+    const tokens = values.flatMap((value) => value.split(/\s+/)).filter(Boolean);
+    if (tokens.length > 0) {
+      element.classList.add(...tokens);
+    }
+  }
+
+  private createCustomLightbox(
+    runtime: GalleryRuntime,
+    options: NgxImageGalleryOpenOptions,
+  ): CustomLightboxRuntime | null {
+    if (!options.lightboxTemplate || !options.lightboxViewContainer) {
+      return null;
+    }
+
+    runtime.elements.defaultUi.hidden = true;
+    const context = this.createLightboxContext(runtime);
+    const viewRef = options.lightboxViewContainer.createEmbeddedView(
+      options.lightboxTemplate,
+      context,
+    );
+    viewRef.detectChanges();
+
+    viewRef.rootNodes.forEach((node: unknown) => {
+      if (node instanceof Node) {
+        runtime.elements.customUi.appendChild(node);
+      }
+    });
+
+    return {
+      viewRef,
+      context,
+    };
+  }
+
+  private createLightboxContext(runtime: GalleryRuntime): NgxImageGalleryLightboxContext {
+    const context: NgxImageGalleryLightboxContext = {
+      $implicit: null as unknown as NgxImageGalleryLightboxContext,
+      state: this.stateSignal(),
+      items: runtime.items,
+      activeItem: null,
+      activeIndex: runtime.activeIndex,
+      count: runtime.items.length,
+      isOpen: true,
+      canGoPrevious: false,
+      canGoNext: false,
+      isLoading: false,
+      hasError: false,
+      close: () => this.close(),
+      previous: () => this.previous(),
+      next: () => this.next(),
+      goTo: (index: number) => this.goTo(index),
+    };
+
+    this.updateLightboxContext(runtime, context);
+    return context;
+  }
+
+  private updateCustomLightbox(runtime: GalleryRuntime): void {
+    if (!runtime.customLightbox) {
+      return;
+    }
+
+    this.updateLightboxContext(runtime, runtime.customLightbox.context);
+    runtime.customLightbox.viewRef.detectChanges();
+  }
+
+  private updateLightboxContext(
+    runtime: GalleryRuntime,
+    context: NgxImageGalleryLightboxContext,
+  ): void {
+    const activeSlide = this.getActiveSlide(runtime);
+    const activeItem = runtime.items[runtime.activeIndex] ?? null;
+    const state: NgxImageGalleryState = {
+      isOpen: true,
+      activeIndex: runtime.activeIndex,
+      activeItem,
+    };
+
+    context.$implicit = context;
+    context.state = state;
+    context.items = runtime.items;
+    context.activeItem = activeItem;
+    context.activeIndex = runtime.activeIndex;
+    context.count = runtime.items.length;
+    context.isOpen = true;
+    context.canGoPrevious = this.normalizeIndex(runtime, runtime.activeIndex - 1) !== null;
+    context.canGoNext = this.normalizeIndex(runtime, runtime.activeIndex + 1) !== null;
+    context.isLoading = Boolean(activeSlide?.fullLoading);
+    context.hasError = Boolean(activeSlide?.fullError);
   }
 
   private bindOverlayEvents(runtime: GalleryRuntime): void {
@@ -788,11 +957,7 @@ export class NgxImageGalleryService {
   }
 
   private trapFocus(event: KeyboardEvent, runtime: GalleryRuntime): void {
-    const focusable = [
-      runtime.elements.closeButton,
-      runtime.elements.prevButton,
-      runtime.elements.nextButton,
-    ].filter((element) => !element.disabled);
+    const focusable = this.getFocusableElements(runtime);
 
     if (focusable.length === 0) {
       event.preventDefault();
@@ -811,6 +976,21 @@ export class NgxImageGalleryService {
 
     event.preventDefault();
     focusable[nextIndex].focus({ preventScroll: true });
+  }
+
+  private getFocusableElements(runtime: GalleryRuntime): HTMLElement[] {
+    const selectors = [
+      'a[href]',
+      'button:not([disabled])',
+      'input:not([disabled])',
+      'select:not([disabled])',
+      'textarea:not([disabled])',
+      '[tabindex]:not([tabindex="-1"])',
+    ].join(',');
+
+    return Array.from(runtime.elements.ui.querySelectorAll<HTMLElement>(selectors)).filter(
+      (element) => element.closest('[hidden], [aria-hidden="true"]') === null,
+    );
   }
 
   private onPointerDown(event: PointerEvent): void {
@@ -1083,6 +1263,7 @@ export class NgxImageGalleryService {
       'ngx-image-gallery-visible',
       Boolean(activeSlide?.fullError),
     );
+    this.updateCustomLightbox(runtime);
   }
 
   private updateState(runtime: GalleryRuntime): void {
@@ -1107,6 +1288,8 @@ export class NgxImageGalleryService {
     }
     runtime.cleanup.forEach((cleanup) => cleanup());
     runtime.cleanup = [];
+    runtime.customLightbox?.viewRef.destroy();
+    runtime.customLightbox = null;
     runtime.elements.overlay.remove();
     runtime.previousFocus?.focus({ preventScroll: true });
     this.runtime = null;

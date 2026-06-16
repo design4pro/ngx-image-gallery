@@ -2,13 +2,23 @@ import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NgxImageGalleryDirective } from './ngx-image-gallery.directive';
 import { NgxImageGalleryItemDirective } from './ngx-image-gallery-item.directive';
+import { NgxImageGalleryLightboxDirective } from './ngx-image-gallery-lightbox.directive';
 import { NgxImageGalleryService } from './ngx-image-gallery.service';
 import type { NgxImageGalleryItem } from './gallery-types';
 
 @Component({
-  imports: [NgxImageGalleryDirective, NgxImageGalleryItemDirective],
+  imports: [
+    NgxImageGalleryDirective,
+    NgxImageGalleryItemDirective,
+    NgxImageGalleryLightboxDirective,
+  ],
   template: `
     <div ngxImageGallery>
+      <ng-template ngxImageGalleryLightbox let-gallery>
+        <div id="custom-status">{{ gallery.activeIndex + 1 }} / {{ gallery.count }}</div>
+        <button id="custom-close" type="button" (click)="gallery.close()">Close</button>
+      </ng-template>
+
       <a id="first" href="full-1.jpg" [ngxImageGalleryItem]="items[0]">
         <img src="thumb-1.jpg" alt="First" />
       </a>
@@ -61,5 +71,18 @@ describe('ngxImageGallery directives', () => {
     expect(service.isOpen()).toBe(true);
     expect(service.activeIndex()).toBe(1);
     expect(document.querySelector('.ngx-image-gallery-overlay')).toBeTruthy();
+  });
+
+  it('renders a custom lightbox template with gallery context', () => {
+    const first = fixture.nativeElement.querySelector('#first') as HTMLAnchorElement;
+
+    first.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
+    fixture.detectChanges();
+
+    const status = document.querySelector('#custom-status');
+    const defaultUi = document.querySelector('.ngx-image-gallery-default-ui');
+
+    expect(status?.textContent?.trim()).toBe('1 / 2');
+    expect(defaultUi?.hasAttribute('hidden')).toBe(true);
   });
 });

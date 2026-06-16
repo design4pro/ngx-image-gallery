@@ -1,12 +1,34 @@
 export const GALLERY_STYLE_ID = 'ngx-image-gallery-styles';
 
 export const GALLERY_STYLES = `
+:where(.ngx-image-gallery-overlay) {
+  --ngx-image-gallery-z-index: 1000;
+  --ngx-image-gallery-color: #fff;
+  --ngx-image-gallery-font-family: Arial, Helvetica, sans-serif;
+  --ngx-image-gallery-backdrop-background: rgba(0, 0, 0, 0.88);
+  --ngx-image-gallery-backdrop-transition: opacity 220ms ease;
+  --ngx-image-gallery-media-transition: transform 333ms cubic-bezier(.4, 0, .22, 1), width 333ms cubic-bezier(.4, 0, .22, 1), height 333ms cubic-bezier(.4, 0, .22, 1);
+  --ngx-image-gallery-full-image-transition: opacity 180ms ease;
+  --ngx-image-gallery-ui-transition: opacity 160ms ease;
+  --ngx-image-gallery-control-color: #fff;
+  --ngx-image-gallery-control-background: rgba(20, 20, 20, 0.48);
+  --ngx-image-gallery-control-border-radius: 4px;
+  --ngx-image-gallery-control-size: 44px;
+  --ngx-image-gallery-control-offset: 16px;
+  --ngx-image-gallery-control-focus-outline: 2px solid #fff;
+  --ngx-image-gallery-counter-padding: 0 12px;
+  --ngx-image-gallery-counter-font-size: 14px;
+  --ngx-image-gallery-status-background: rgba(20, 20, 20, 0.56);
+  --ngx-image-gallery-status-border-radius: 4px;
+  --ngx-image-gallery-status-padding: 8px 12px;
+  --ngx-image-gallery-status-font-size: 13px;
+}
 .ngx-image-gallery-overlay {
   position: fixed;
   inset: 0;
-  z-index: 1000;
-  color: #fff;
-  font-family: Arial, Helvetica, sans-serif;
+  z-index: var(--ngx-image-gallery-z-index);
+  color: var(--ngx-image-gallery-color);
+  font-family: var(--ngx-image-gallery-font-family);
   outline: none;
   touch-action: none;
   overscroll-behavior: contain;
@@ -18,9 +40,9 @@ export const GALLERY_STYLES = `
 .ngx-image-gallery-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.88);
+  background: var(--ngx-image-gallery-backdrop-background);
   opacity: 0;
-  transition: opacity 220ms ease;
+  transition: var(--ngx-image-gallery-backdrop-transition);
 }
 .ngx-image-gallery-overlay.ngx-image-gallery-open .ngx-image-gallery-backdrop {
   opacity: 1;
@@ -59,10 +81,7 @@ export const GALLERY_STYLES = `
   transform-origin: 0 0;
   will-change: transform, width, height;
   touch-action: none;
-  transition:
-    transform 333ms cubic-bezier(.4, 0, .22, 1),
-    width 333ms cubic-bezier(.4, 0, .22, 1),
-    height 333ms cubic-bezier(.4, 0, .22, 1);
+  transition: var(--ngx-image-gallery-media-transition);
   user-select: none;
 }
 .ngx-image-gallery-image {
@@ -84,7 +103,7 @@ export const GALLERY_STYLES = `
 }
 .ngx-image-gallery-full {
   opacity: 0;
-  transition: opacity 180ms ease;
+  transition: var(--ngx-image-gallery-full-image-transition);
 }
 .ngx-image-gallery-full.ngx-image-gallery-loaded {
   opacity: 1;
@@ -94,36 +113,57 @@ export const GALLERY_STYLES = `
   inset: 0;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 160ms ease;
+  transition: var(--ngx-image-gallery-ui-transition);
 }
 .ngx-image-gallery-overlay.ngx-image-gallery-open .ngx-image-gallery-ui {
   opacity: 1;
+}
+.ngx-image-gallery-default-ui,
+.ngx-image-gallery-custom-ui {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.ngx-image-gallery-custom-ui :is(a[href], button, input, select, textarea, [tabindex]) {
+  pointer-events: auto;
 }
 .ngx-image-gallery-button,
 .ngx-image-gallery-counter {
   pointer-events: auto;
   position: absolute;
-  min-width: 44px;
-  min-height: 44px;
+  min-width: var(--ngx-image-gallery-control-size);
+  min-height: var(--ngx-image-gallery-control-size);
   border: 0;
-  border-radius: 4px;
-  color: #fff;
-  background: rgba(20, 20, 20, 0.48);
+  border-radius: var(--ngx-image-gallery-control-border-radius);
+  color: var(--ngx-image-gallery-control-color);
+  background: var(--ngx-image-gallery-control-background);
   font: inherit;
   line-height: 1;
 }
 .ngx-image-gallery-button {
-  display: grid;
-  place-items: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--ngx-image-gallery-control-size);
+  height: var(--ngx-image-gallery-control-size);
+  padding: 0;
   cursor: pointer;
 }
+.ngx-image-gallery-button-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1em;
+  height: 1em;
+  line-height: 1;
+}
 .ngx-image-gallery-button:focus-visible {
-  outline: 2px solid #fff;
+  outline: var(--ngx-image-gallery-control-focus-outline);
   outline-offset: 2px;
 }
 .ngx-image-gallery-close {
-  top: 16px;
-  right: 16px;
+  top: var(--ngx-image-gallery-control-offset);
+  right: var(--ngx-image-gallery-control-offset);
   font-size: 28px;
 }
 .ngx-image-gallery-prev,
@@ -133,18 +173,18 @@ export const GALLERY_STYLES = `
   font-size: 34px;
 }
 .ngx-image-gallery-prev {
-  left: 16px;
+  left: var(--ngx-image-gallery-control-offset);
 }
 .ngx-image-gallery-next {
-  right: 16px;
+  right: var(--ngx-image-gallery-control-offset);
 }
 .ngx-image-gallery-counter {
-  top: 16px;
-  left: 16px;
+  top: var(--ngx-image-gallery-control-offset);
+  left: var(--ngx-image-gallery-control-offset);
   display: flex;
   align-items: center;
-  padding: 0 12px;
-  font-size: 14px;
+  padding: var(--ngx-image-gallery-counter-padding);
+  font-size: var(--ngx-image-gallery-counter-font-size);
 }
 .ngx-image-gallery-loading,
 .ngx-image-gallery-error {
@@ -153,12 +193,12 @@ export const GALLERY_STYLES = `
   bottom: 24px;
   transform: translateX(-50%);
   min-height: 32px;
-  border-radius: 4px;
-  padding: 8px 12px;
-  background: rgba(20, 20, 20, 0.56);
-  font-size: 13px;
+  border-radius: var(--ngx-image-gallery-status-border-radius);
+  padding: var(--ngx-image-gallery-status-padding);
+  background: var(--ngx-image-gallery-status-background);
+  font-size: var(--ngx-image-gallery-status-font-size);
   opacity: 0;
-  transition: opacity 160ms ease;
+  transition: var(--ngx-image-gallery-ui-transition);
   pointer-events: none;
 }
 .ngx-image-gallery-loading.ngx-image-gallery-visible,

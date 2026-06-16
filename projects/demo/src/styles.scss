@@ -1,3 +1,5 @@
+@use 'tailwindcss';
+
 html {
   min-height: 100%;
   background: #f6f7f9;
@@ -15,4 +17,23 @@ body {
     BlinkMacSystemFont,
     'Segoe UI',
     sans-serif;
+}
+
+.css-properties-lightbox {
+  --ngx-image-gallery-z-index: 1200;
+  --ngx-image-gallery-color: #f8fafc;
+  --ngx-image-gallery-font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --ngx-image-gallery-backdrop-background: color-mix(in srgb, #09111f 88%, transparent);
+  --ngx-image-gallery-control-background: color-mix(in srgb, #f8fafc 16%, transparent);
+  --ngx-image-gallery-control-border-radius: 999px;
+  --ngx-image-gallery-control-offset: 18px;
+  --ngx-image-gallery-control-focus-outline: 2px solid #38bdf8;
+  --ngx-image-gallery-counter-padding: 0 14px;
+  --ngx-image-gallery-status-background: color-mix(in srgb, #09111f 72%, transparent);
+  --ngx-image-gallery-status-border-radius: 999px;
+}
+
+.tailwind-lightbox {
+  --ngx-image-gallery-backdrop-background: rgb(10 10 10 / 92%);
 }

@@ -263,6 +263,30 @@ describe('NgxImageGalleryService', () => {
     });
   });
 
+  it('adds configured classes to generated lightbox elements', () => {
+    service.open([{ fullSrc: 'full-1.jpg', thumbSrc: 'thumb-1.jpg' }], 0, {
+      classes: {
+        overlay: 'tailwind-overlay',
+        button: ['tailwind-button', 'rounded-full'],
+        closeButton: 'tailwind-close',
+        counter: 'tailwind-counter',
+      },
+    });
+
+    expect(
+      document.querySelector('.ngx-image-gallery-overlay')?.classList.contains('tailwind-overlay'),
+    ).toBe(true);
+    expect(
+      document.querySelector('.ngx-image-gallery-close')?.classList.contains('tailwind-button'),
+    ).toBe(true);
+    expect(
+      document.querySelector('.ngx-image-gallery-close')?.classList.contains('tailwind-close'),
+    ).toBe(true);
+    expect(
+      document.querySelector('.ngx-image-gallery-counter')?.classList.contains('tailwind-counter'),
+    ).toBe(true);
+  });
+
   it('zooms around the selected point and keeps zooming in on repeated double-click', () => {
     FakeImage.naturalWidthValue = 6400;
     FakeImage.naturalHeightValue = 3200;

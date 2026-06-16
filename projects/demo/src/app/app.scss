@@ -1,13 +1,13 @@
 .gallery-shell {
   width: min(1120px, calc(100vw - 32px));
   margin: 0 auto;
-  padding: 32px 0 48px;
+  padding: 32px 0 56px;
 }
 
 .gallery-header {
   display: grid;
   gap: 6px;
-  margin-bottom: 20px;
+  margin-bottom: 28px;
 }
 
 .gallery-header h1 {
@@ -22,6 +22,30 @@
   margin: 0;
   color: #5e6470;
   font-size: 15px;
+}
+
+.example-section {
+  display: grid;
+  gap: 14px;
+  margin-top: 28px;
+}
+
+.example-heading {
+  display: grid;
+  gap: 4px;
+}
+
+.example-heading h2 {
+  margin: 0;
+  color: #1f2937;
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.example-heading p {
+  margin: 0;
+  color: #687181;
+  font-size: 14px;
 }
 
 .photo-grid {
@@ -41,7 +65,7 @@
   aspect-ratio: 4 / 3;
 }
 
-.photo-tile:nth-child(4) {
+.css-grid .photo-tile:nth-child(4) {
   aspect-ratio: 3 / 4;
   grid-row: span 2;
 }

@@ -1,14 +1,89 @@
 <main class="gallery-shell">
   <header class="gallery-header">
     <h1>{{ title() }}</h1>
-    <p>Native Angular progressive image gallery without PhotoSwipe as a dependency.</p>
+    <p>Native Angular progressive image gallery with directive-only markup.</p>
   </header>
 
-  <section class="photo-grid" ngxImageGallery>
-    @for (photo of photos; track photo.fullSrc) {
-      <a class="photo-tile" [href]="photo.fullSrc" [ngxImageGalleryItem]="photo">
-        <img [src]="photo.thumbSrc" [alt]="photo.alt" loading="lazy" />
-      </a>
-    }
+  <section class="example-section">
+    <div class="example-heading">
+      <h2>Custom properties</h2>
+      <p>Default lightbox structure, application-owned CSS variables.</p>
+    </div>
+
+    <div class="photo-grid css-grid" ngxImageGallery [ngxImageGallery]="cssPropertiesOptions">
+      @for (photo of cssPhotos; track photo.fullSrc) {
+        <a class="photo-tile" [href]="photo.fullSrc" [ngxImageGalleryItem]="photo">
+          <img [src]="photo.thumbSrc" [alt]="photo.alt" loading="lazy" />
+        </a>
+      }
+    </div>
+  </section>
+
+  <section class="example-section">
+    <div class="example-heading">
+      <h2>Tailwind 4</h2>
+      <p>Custom lightbox template, utility classes, and directive registration.</p>
+    </div>
+
+    <div
+      ngxImageGallery
+      [ngxImageGallery]="tailwindOptions"
+      class="grid grid-cols-2 gap-3 sm:grid-cols-3"
+    >
+      <ng-template ngxImageGalleryLightbox let-gallery>
+        <div
+          class="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-3 p-4 text-white"
+        >
+          <div class="rounded-full bg-black/55 px-3 py-2 text-sm font-medium backdrop-blur-md">
+            {{ gallery.activeIndex + 1 }} / {{ gallery.count }}
+          </div>
+
+          <button
+            type="button"
+            class="pointer-events-auto inline-flex h-10 items-center rounded-full bg-white px-4 text-sm font-semibold text-neutral-950 shadow-lg transition hover:bg-neutral-200 focus:outline-none focus:ring-2 focus:ring-white/75"
+            (click)="gallery.close()"
+          >
+            Close
+          </button>
+        </div>
+
+        <div
+          class="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex items-center justify-center gap-2 p-4"
+        >
+          <button
+            type="button"
+            class="pointer-events-auto inline-flex h-10 min-w-28 items-center justify-center rounded-full bg-white/15 px-4 text-sm font-semibold text-white backdrop-blur-md transition hover:bg-white/25 focus:outline-none focus:ring-2 focus:ring-white/75 disabled:opacity-35"
+            [disabled]="!gallery.canGoPrevious"
+            (click)="gallery.previous()"
+          >
+            Previous
+          </button>
+
+          <button
+            type="button"
+            class="pointer-events-auto inline-flex h-10 min-w-28 items-center justify-center rounded-full bg-white px-4 text-sm font-semibold text-neutral-950 shadow-lg transition hover:bg-neutral-200 focus:outline-none focus:ring-2 focus:ring-white/75 disabled:opacity-35"
+            [disabled]="!gallery.canGoNext"
+            (click)="gallery.next()"
+          >
+            Next
+          </button>
+        </div>
+      </ng-template>
+
+      @for (photo of tailwindPhotos; track photo.fullSrc) {
+        <a
+          class="group relative block aspect-[4/3] overflow-hidden rounded-md bg-neutral-200 outline-none ring-offset-2 ring-offset-white transition focus-visible:ring-2 focus-visible:ring-sky-600"
+          [href]="photo.fullSrc"
+          [ngxImageGalleryItem]="photo"
+        >
+          <img
+            class="h-full w-full object-cover transition duration-200 group-hover:scale-[1.035]"
+            [src]="photo.thumbSrc"
+            [alt]="photo.alt"
+            loading="lazy"
+          />
+        </a>
+      }
+    </div>
   </section>
 </main>

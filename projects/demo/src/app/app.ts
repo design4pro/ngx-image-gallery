@@ -2,12 +2,18 @@ import { Component, signal } from '@angular/core';
 import {
   NgxImageGalleryDirective,
   NgxImageGalleryItemDirective,
+  NgxImageGalleryLightboxDirective,
   type NgxImageGalleryItem,
+  type NgxImageGalleryOpenOptions,
 } from 'ngx-image-gallery';
 
 @Component({
   selector: 'app-root',
-  imports: [NgxImageGalleryDirective, NgxImageGalleryItemDirective],
+  imports: [
+    NgxImageGalleryDirective,
+    NgxImageGalleryItemDirective,
+    NgxImageGalleryLightboxDirective,
+  ],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })
@@ -45,4 +51,20 @@ export class App {
       alt: 'Snowy mountain ridge',
     },
   ];
+  protected readonly cssPhotos = this.photos.slice(0, 4);
+  protected readonly tailwindPhotos = this.photos.slice(2);
+
+  protected readonly cssPropertiesOptions: Partial<NgxImageGalleryOpenOptions> = {
+    classes: {
+      overlay: 'css-properties-lightbox',
+    },
+  };
+
+  protected readonly tailwindOptions: Partial<NgxImageGalleryOpenOptions> = {
+    showCounter: false,
+    classes: {
+      overlay: 'tailwind-lightbox',
+      customUi: 'tailwind-lightbox-ui',
+    },
+  };
 }

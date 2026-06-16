@@ -1,59 +1,54 @@
-# NgxImageGalleryWorkspace
+# ngx-image-gallery workspace
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.0.1.
+This workspace contains the `ngx-image-gallery` Angular library and a demo application.
 
-## Development server
+## Projects
 
-To start a local development server, run:
+- `projects/ngx-image-gallery`: directive-only Angular image gallery library.
+- `projects/demo`: consumer demo with CSS custom properties and Tailwind 4 examples.
 
-```bash
-ng serve
-```
-
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+## Development Server
 
 ```bash
-ng generate component component-name
+npx ng serve demo
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+Open `http://localhost:4200/`.
+
+## Build
+
+Build the library:
 
 ```bash
-ng generate --help
+npx ng build ngx-image-gallery
 ```
 
-## Building
-
-To build the project run:
+Build the demo:
 
 ```bash
-ng build
+npx ng build demo --configuration development
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+## Tests
 
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
+Run library tests:
 
 ```bash
-ng test
+npx ng test ngx-image-gallery --watch=false
 ```
 
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
+Run demo tests:
 
 ```bash
-ng e2e
+npx ng test demo --watch=false
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+## Formatting
 
-## Additional Resources
+```bash
+npx prettier --check .
+```
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+## Design Notes
+
+Read `DESIGN.md` before changing library architecture or public API. The library intentionally stays independent of UI frameworks. Tailwind is used only by the demo as a consumer styling example.

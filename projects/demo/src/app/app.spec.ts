@@ -20,6 +20,7 @@ describe('App', () => {
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('h1')?.textContent).toContain('ngx-image-gallery');
-    expect(compiled.querySelectorAll('.photo-tile').length).toBe(6);
+    expect(compiled.querySelectorAll('.photo-tile').length).toBe(4);
+    expect(compiled.querySelectorAll('a[href^="https://picsum.photos"]').length).toBe(8);
   });
 });

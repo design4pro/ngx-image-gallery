@@ -1,4 +1,9 @@
-import { InjectionToken, type Provider } from '@angular/core';
+import {
+  InjectionToken,
+  type Provider,
+  type TemplateRef,
+  type ViewContainerRef,
+} from '@angular/core';
 
 export interface NgxImageGalleryItem {
   fullSrc: string;
@@ -13,6 +18,25 @@ export interface NgxImageGalleryItem {
   data?: unknown;
 }
 
+export type NgxImageGalleryClassValue = string | readonly string[] | null | undefined;
+
+export interface NgxImageGalleryClasses {
+  overlay?: NgxImageGalleryClassValue;
+  backdrop?: NgxImageGalleryClassValue;
+  stage?: NgxImageGalleryClassValue;
+  track?: NgxImageGalleryClassValue;
+  ui?: NgxImageGalleryClassValue;
+  defaultUi?: NgxImageGalleryClassValue;
+  customUi?: NgxImageGalleryClassValue;
+  button?: NgxImageGalleryClassValue;
+  closeButton?: NgxImageGalleryClassValue;
+  previousButton?: NgxImageGalleryClassValue;
+  nextButton?: NgxImageGalleryClassValue;
+  counter?: NgxImageGalleryClassValue;
+  loading?: NgxImageGalleryClassValue;
+  error?: NgxImageGalleryClassValue;
+}
+
 export interface NgxImageGalleryOptions {
   loadOriginal: 'after-open';
   provisionalLongEdge: number;
@@ -20,17 +44,38 @@ export interface NgxImageGalleryOptions {
   closeOnEsc: boolean;
   closeOnBackdrop: boolean;
   showCounter: boolean;
+  classes: NgxImageGalleryClasses;
 }
 
 export interface NgxImageGalleryOpenOptions extends Partial<NgxImageGalleryOptions> {
   originElement?: HTMLElement;
   originElements?: readonly (HTMLElement | undefined)[];
+  lightboxTemplate?: TemplateRef<NgxImageGalleryLightboxContext>;
+  lightboxViewContainer?: ViewContainerRef;
 }
 
 export interface NgxImageGalleryState {
   isOpen: boolean;
   activeIndex: number;
   activeItem: NgxImageGalleryItem | null;
+}
+
+export interface NgxImageGalleryLightboxContext {
+  $implicit: NgxImageGalleryLightboxContext;
+  state: NgxImageGalleryState;
+  items: readonly NgxImageGalleryItem[];
+  activeItem: NgxImageGalleryItem | null;
+  activeIndex: number;
+  count: number;
+  isOpen: boolean;
+  canGoPrevious: boolean;
+  canGoNext: boolean;
+  isLoading: boolean;
+  hasError: boolean;
+  close: () => void;
+  previous: () => void;
+  next: () => void;
+  goTo: (index: number) => void;
 }
 
 export const DEFAULT_NGX_IMAGE_GALLERY_OPTIONS: NgxImageGalleryOptions = {
@@ -40,6 +85,7 @@ export const DEFAULT_NGX_IMAGE_GALLERY_OPTIONS: NgxImageGalleryOptions = {
   closeOnEsc: true,
   closeOnBackdrop: true,
   showCounter: true,
+  classes: {},
 };
 
 export const NGX_IMAGE_GALLERY_OPTIONS = new InjectionToken<NgxImageGalleryOptions>(
