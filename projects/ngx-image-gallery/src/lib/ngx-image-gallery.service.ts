@@ -466,7 +466,7 @@ export class NgxImageGalleryService {
   private startOpeningAnimation(runtime: GalleryRuntime): void {
     const activeSlide = this.getActiveSlide(runtime);
     if (activeSlide?.elements && activeSlide.originElement) {
-      this.applyOriginTransform(activeSlide);
+      this.applyOriginTransform(activeSlide, true);
     }
 
     runtime.elements.overlay.getBoundingClientRect();
@@ -497,7 +497,7 @@ export class NgxImageGalleryService {
     this.loadActiveFullImage(runtime);
   }
 
-  private applyOriginTransform(slide: SlideRuntime): void {
+  private applyOriginTransform(slide: SlideRuntime, immediate = false): void {
     if (!slide.elements || !slide.originElement) {
       return;
     }
@@ -507,9 +507,14 @@ export class NgxImageGalleryService {
       return;
     }
 
+    slide.elements.media.style.transition = immediate ? 'none' : '';
     slide.elements.media.style.width = `${slide.fitted.width}px`;
     slide.elements.media.style.height = `${slide.fitted.height}px`;
     slide.elements.media.style.transform = `translate3d(${origin.left}px, ${origin.top}px, 0) scale(${origin.width / slide.fitted.width})`;
+
+    if (immediate) {
+      slide.elements.media.getBoundingClientRect();
+    }
   }
 
   private applyMediaLayout(slide: SlideRuntime, runtime: GalleryRuntime, immediate = false): void {

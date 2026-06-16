@@ -81,6 +81,31 @@ describe('NgxImageGalleryService', () => {
     expect(FakeImage.requests).toEqual(['full-1.jpg']);
   });
 
+  it('starts opening from the thumbnail transform before animating to the fitted layout', () => {
+    const origin = createOriginElement();
+    const frameCallbacks: FrameRequestCallback[] = [];
+    window.requestAnimationFrame = (callback: FrameRequestCallback): number => {
+      frameCallbacks.push(callback);
+      return 1;
+    };
+
+    service.open([{ fullSrc: 'full-1.jpg', thumbSrc: 'thumb-1.jpg' }], 0, {
+      originElement: origin,
+      originElements: [origin],
+    });
+
+    const media = document.querySelector<HTMLDivElement>('.ngx-image-gallery-media');
+    expect(media).toBeTruthy();
+    expect(media?.style.transition).toBe('none');
+    expect(media?.style.transform).toContain('translate3d(30px, 20px, 0)');
+
+    expect(frameCallbacks).toHaveLength(1);
+    frameCallbacks[0]?.(0);
+
+    expect(media?.style.transition).toBe('');
+    expect(media?.style.transform).toContain('translate3d(32px, 144px, 0) scale(1)');
+  });
+
   it('loads the full image only after a slide becomes active', () => {
     const origins = [createOriginElement(), createOriginElement()];
 
