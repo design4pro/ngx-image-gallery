@@ -1,0 +1,14 @@
+<main class="gallery-shell">
+  <header class="gallery-header">
+    <h1>{{ title() }}</h1>
+    <p>Native Angular progressive image gallery with directive-only markup.</p>
+
+    <nav class="gallery-nav" aria-label="Gallery examples">
+      <a routerLink="/custom-properties" routerLinkActive="gallery-nav-active">CSS properties</a>
+      <a routerLink="/tailwind" routerLinkActive="gallery-nav-active">Tailwind 4</a>
+      <a routerLink="/dynamic-pool" routerLinkActive="gallery-nav-active">Dynamic pool</a>
+    </nav>
+  </header>
+
+  <router-outlet />
+</main>
