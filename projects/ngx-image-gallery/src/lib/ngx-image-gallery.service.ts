@@ -1035,7 +1035,16 @@ export class NgxImageGalleryService {
 
   private onPointerMove(event: PointerEvent): void {
     const runtime = this.runtime;
-    if (!runtime || !runtime.gesture || !runtime.pointers.has(event.pointerId)) {
+    if (!runtime) {
+      return;
+    }
+
+    if (!runtime.gesture) {
+      this.panZoomedSlideToCursor(runtime, event);
+      return;
+    }
+
+    if (!runtime.pointers.has(event.pointerId)) {
       return;
     }
 
@@ -1072,6 +1081,51 @@ export class NgxImageGalleryService {
 
     runtime.elements.track.style.transition = 'none';
     runtime.elements.track.style.transform = `translate3d(${deltaX}px, 0, 0)`;
+  }
+
+  private panZoomedSlideToCursor(runtime: GalleryRuntime, event: PointerEvent): void {
+    if (
+      runtime.isOpening ||
+      runtime.isClosing ||
+      event.pointerType === 'touch' ||
+      event.buttons > 0
+    ) {
+      return;
+    }
+
+    const activeSlide = this.getActiveSlide(runtime);
+    if (!activeSlide || activeSlide.zoomScale <= activeSlide.zoomBounds.minScale) {
+      return;
+    }
+
+    const halfViewportWidth = runtime.viewport.width / 2;
+    const halfViewportHeight = runtime.viewport.height / 2;
+    const overflowX = Math.max(
+      0,
+      (activeSlide.fitted.width * activeSlide.zoomScale - runtime.viewport.width) / 2,
+    );
+    const overflowY = Math.max(
+      0,
+      (activeSlide.fitted.height * activeSlide.zoomScale - runtime.viewport.height) / 2,
+    );
+
+    activeSlide.pan = clampPan(
+      {
+        x:
+          halfViewportWidth > 0
+            ? -((event.clientX - halfViewportWidth) / halfViewportWidth) * overflowX
+            : 0,
+        y:
+          halfViewportHeight > 0
+            ? -((event.clientY - halfViewportHeight) / halfViewportHeight) * overflowY
+            : 0,
+      },
+      runtime.viewport,
+      activeSlide.fitted,
+      activeSlide.zoomScale,
+    );
+    activeSlide.userZoomed = true;
+    this.scheduleInteractiveMediaLayout(activeSlide, runtime);
   }
 
   private applyPinch(runtime: GalleryRuntime, activeSlide: SlideRuntime): void {

@@ -319,6 +319,21 @@ describe('NgxImageGalleryService', () => {
     expect(media.style.transform).toBe('translate3d(-88px, 84px, 0) scale(1.25)');
   });
 
+  it('pans the zoomed image opposite to mouse cursor movement', () => {
+    service.open([{ fullSrc: 'full-1.jpg', thumbSrc: 'thumb-1.jpg', width: 2400, height: 1200 }]);
+    vi.advanceTimersByTime(333);
+
+    const stage = getStage();
+    const media = getMedia();
+
+    stage.dispatchEvent(createMouseEvent('dblclick', { clientX: 512, clientY: 384 }));
+    stage.dispatchEvent(
+      createPointerEvent('pointermove', { pointerId: 1, clientX: 512, clientY: 768 }),
+    );
+
+    expect(media.style.transform).toBe('translate3d(-688px, -432px, 0) scale(2.5)');
+  });
+
   it('prevents native page zoom during touch pinch gestures', () => {
     service.open([{ fullSrc: 'full-1.jpg', thumbSrc: 'thumb-1.jpg', width: 2400, height: 1200 }]);
     vi.advanceTimersByTime(333);
