@@ -1,5 +1,7 @@
 import {
   calculateZoomBounds,
+  calculateZoomPanForPoint,
+  getNextZoomScale,
   clampPan,
   fitIntoViewport,
   getImageSource,
@@ -78,5 +80,42 @@ describe('gallery geometry', () => {
 
     expect(zoom.maxScale).toBe(3);
     expect(pan).toEqual({ x: 700, y: -200 });
+  });
+
+  it('keeps the selected image point stable while changing zoom scale', () => {
+    const pan = calculateZoomPanForPoint({
+      viewport: { width: 1000, height: 800 },
+      fitted: { x: 250, y: 250, width: 500, height: 300 },
+      anchorPoint: { x: 550, y: 410 },
+      targetPoint: { x: 550, y: 410 },
+      pan: { x: 0, y: 0 },
+      currentScale: 1,
+      targetScale: 3,
+    });
+
+    expect(pan).toEqual({ x: -100, y: -20 });
+  });
+
+  it('clamps zoom pan when the selected point would reveal empty space', () => {
+    const pan = calculateZoomPanForPoint({
+      viewport: { width: 1000, height: 800 },
+      fitted: { x: 100, y: 200, width: 800, height: 400 },
+      anchorPoint: { x: 900, y: 600 },
+      targetPoint: { x: 900, y: 600 },
+      pan: { x: 0, y: 0 },
+      currentScale: 1,
+      targetScale: 2,
+    });
+
+    expect(pan).toEqual({ x: -300, y: 0 });
+  });
+
+  it('steps through multiple zoom levels before resetting at the maximum', () => {
+    const bounds = { minScale: 1, initialScale: 1, maxScale: 8 };
+
+    expect(getNextZoomScale(1, bounds)).toBe(2.5);
+    expect(getNextZoomScale(2.5, bounds)).toBe(5);
+    expect(getNextZoomScale(5, bounds)).toBe(8);
+    expect(getNextZoomScale(8, bounds)).toBe(1);
   });
 });

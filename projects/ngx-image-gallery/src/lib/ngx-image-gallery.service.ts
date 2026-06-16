@@ -2,11 +2,14 @@ import { DOCUMENT, isPlatformBrowser } from '@angular/common';
 import { Injectable, NgZone, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import {
   calculateZoomBounds,
+  calculateZoomPanForPoint,
   clamp,
   clampPan,
   fitIntoViewport,
   findImageElement,
   getImageSource,
+  getNextZoomScale,
+  getScaledOrigin,
   resolveImageDimensions,
   type GalleryPoint,
   type GalleryRect,
@@ -72,6 +75,7 @@ interface PointerGesture {
   startPan: GalleryPoint;
   startZoomScale: number;
   startDistance: number;
+  startCenter: GalleryPoint;
 }
 
 interface GalleryRuntime {
@@ -89,6 +93,7 @@ interface GalleryRuntime {
   pointers: Map<number, GalleryPoint>;
   gesture: PointerGesture | null;
   openTimer: number | null;
+  mediaFrame: number | null;
 }
 
 const ANIMATION_DURATION_MS = 333;
@@ -96,6 +101,7 @@ const NAVIGATION_DURATION_MS = 220;
 const SWIPE_THRESHOLD_PX = 60;
 const VIEWPORT_PADDING_PX = 32;
 const ORIGIN_RATIO_TOLERANCE = 0.01;
+const WHEEL_ZOOM_FACTOR = 1.25;
 
 interface OriginCrop {
   objectPosition: string;
@@ -164,6 +170,7 @@ export class NgxImageGalleryService {
         pointers: new Map<number, GalleryPoint>(),
         gesture: null,
         openTimer: null,
+        mediaFrame: null,
       };
 
       this.runtime = runtime;
@@ -349,6 +356,18 @@ export class NgxImageGalleryService {
       event.preventDefault();
       this.toggleZoom(event.clientX, event.clientY);
     });
+    this.listen(runtime, runtime.elements.stage, 'wheel', (event) => this.onWheel(event), {
+      passive: false,
+    });
+    this.listen(
+      runtime,
+      runtime.elements.stage,
+      'touchmove',
+      (event) => this.preventNativePinch(event),
+      { passive: false },
+    );
+    this.listen(runtime, runtime.elements.stage, 'gesturestart', preventDefault);
+    this.listen(runtime, runtime.elements.stage, 'gesturechange', preventDefault);
     this.listen(runtime, runtime.elements.stage, 'pointerdown', (event) =>
       this.onPointerDown(event),
     );
@@ -368,27 +387,38 @@ export class NgxImageGalleryService {
     target: Window,
     eventName: K,
     listener: (event: WindowEventMap[K]) => void,
+    options?: AddEventListenerOptions,
   ): void;
   private listen<K extends keyof DocumentEventMap>(
     runtime: GalleryRuntime,
     target: Document,
     eventName: K,
     listener: (event: DocumentEventMap[K]) => void,
+    options?: AddEventListenerOptions,
   ): void;
   private listen<K extends keyof HTMLElementEventMap>(
     runtime: GalleryRuntime,
     target: HTMLElement,
     eventName: K,
     listener: (event: HTMLElementEventMap[K]) => void,
+    options?: AddEventListenerOptions,
   ): void;
   private listen(
     runtime: GalleryRuntime,
     target: Window | Document | HTMLElement,
     eventName: string,
     listener: EventListener,
+    options?: AddEventListenerOptions,
+  ): void;
+  private listen(
+    runtime: GalleryRuntime,
+    target: Window | Document | HTMLElement,
+    eventName: string,
+    listener: EventListener,
+    options?: AddEventListenerOptions,
   ): void {
-    target.addEventListener(eventName, listener);
-    runtime.cleanup.push(() => target.removeEventListener(eventName, listener));
+    target.addEventListener(eventName, listener, options);
+    runtime.cleanup.push(() => target.removeEventListener(eventName, listener, options));
   }
 
   private renderVisibleSlides(runtime: GalleryRuntime): void {
@@ -439,7 +469,7 @@ export class NgxImageGalleryService {
 
     slideElement.appendChild(media);
     runtime.elements.track.appendChild(slideElement);
-    this.applyMediaLayout(slide, runtime, true);
+    this.applyMediaLayout(slide, runtime, 'instant');
   }
 
   private getSlideClassName(position: -1 | 0 | 1): string {
@@ -554,9 +584,7 @@ export class NgxImageGalleryService {
     }
 
     return {
-      objectPosition: originImage
-        ? this.getOriginObjectPosition(originImage)
-        : '50% 50%',
+      objectPosition: originImage ? this.getOriginObjectPosition(originImage) : '50% 50%',
     };
   }
 
@@ -602,7 +630,11 @@ export class NgxImageGalleryService {
     }
   }
 
-  private applyMediaLayout(slide: SlideRuntime, runtime: GalleryRuntime, immediate = false): void {
+  private applyMediaLayout(
+    slide: SlideRuntime,
+    runtime: GalleryRuntime,
+    mode: 'animate' | 'instant' | 'interactive' = 'animate',
+  ): void {
     if (!slide.elements) {
       return;
     }
@@ -612,20 +644,43 @@ export class NgxImageGalleryService {
     slide.zoomScale = clamp(slide.zoomScale, slide.zoomBounds.minScale, slide.zoomBounds.maxScale);
     slide.pan = clampPan(slide.pan, runtime.viewport, slide.fitted, slide.zoomScale);
 
-    slide.elements.media.style.transition = immediate ? 'none' : '';
+    slide.elements.media.style.transition = mode === 'animate' ? '' : 'none';
     slide.elements.media.style.width = `${slide.fitted.width}px`;
     slide.elements.media.style.height = `${slide.fitted.height}px`;
     slide.elements.media.style.transform = this.getMediaTransform(slide);
 
-    if (immediate) {
+    if (mode === 'instant') {
       slide.elements.media.getBoundingClientRect();
       slide.elements.media.style.transition = '';
     }
   }
 
+  private scheduleInteractiveMediaLayout(slide: SlideRuntime, runtime: GalleryRuntime): void {
+    if (runtime.mediaFrame !== null) {
+      return;
+    }
+
+    runtime.mediaFrame = window.requestAnimationFrame(() => {
+      runtime.mediaFrame = null;
+      if (this.runtime !== runtime) {
+        return;
+      }
+
+      this.applyMediaLayout(slide, runtime, 'interactive');
+    });
+  }
+
+  private restoreInteractiveMediaTransition(runtime: GalleryRuntime): void {
+    const activeSlide = this.getActiveSlide(runtime);
+    if (activeSlide?.elements) {
+      activeSlide.elements.media.style.transition = '';
+    }
+  }
+
   private getMediaTransform(slide: SlideRuntime): string {
-    const x = slide.fitted.x + slide.pan.x;
-    const y = slide.fitted.y + slide.pan.y;
+    const origin = getScaledOrigin(slide.fitted, slide.zoomScale);
+    const x = origin.x + slide.pan.x;
+    const y = origin.y + slide.pan.y;
     return `translate3d(${x}px, ${y}px, 0) scale(${slide.zoomScale})`;
   }
 
@@ -700,7 +755,7 @@ export class NgxImageGalleryService {
     }
 
     runtime.viewport = this.getViewportSize();
-    runtime.slides.forEach((slide) => this.applyMediaLayout(slide, runtime, true));
+    runtime.slides.forEach((slide) => this.applyMediaLayout(slide, runtime, 'instant'));
   }
 
   private onKeyDown(event: KeyboardEvent): void {
@@ -781,6 +836,7 @@ export class NgxImageGalleryService {
         startPan: { ...activeSlide.pan },
         startZoomScale: activeSlide.zoomScale,
         startDistance: distance(first, second),
+        startCenter: midpoint(first, second),
       };
       return;
     }
@@ -793,6 +849,7 @@ export class NgxImageGalleryService {
       startPan: { ...activeSlide.pan },
       startZoomScale: activeSlide.zoomScale,
       startDistance: 0,
+      startCenter: { x: event.clientX, y: event.clientY },
     };
   }
 
@@ -829,7 +886,7 @@ export class NgxImageGalleryService {
         activeSlide.zoomScale,
       );
       activeSlide.userZoomed = true;
-      this.applyMediaLayout(activeSlide, runtime, true);
+      this.scheduleInteractiveMediaLayout(activeSlide, runtime);
       return;
     }
 
@@ -846,19 +903,21 @@ export class NgxImageGalleryService {
     const nextDistance = distance(first, second);
     const ratio =
       runtime.gesture.startDistance > 0 ? nextDistance / runtime.gesture.startDistance : 1;
-    activeSlide.zoomScale = clamp(
+    const targetScale = clamp(
       runtime.gesture.startZoomScale * ratio,
       activeSlide.zoomBounds.minScale,
       activeSlide.zoomBounds.maxScale,
     );
-    activeSlide.pan = clampPan(
-      activeSlide.pan,
-      runtime.viewport,
-      activeSlide.fitted,
-      activeSlide.zoomScale,
+    this.applyZoomAtPoint(
+      runtime,
+      activeSlide,
+      runtime.gesture.startCenter,
+      midpoint(first, second),
+      targetScale,
+      runtime.gesture.startPan,
+      runtime.gesture.startZoomScale,
+      'interactive',
     );
-    activeSlide.userZoomed = true;
-    this.applyMediaLayout(activeSlide, runtime, true);
   }
 
   private onPointerUp(event: PointerEvent): void {
@@ -876,6 +935,7 @@ export class NgxImageGalleryService {
     }
 
     runtime.gesture = null;
+    this.restoreInteractiveMediaTransition(runtime);
     if (gesture.mode !== 'swipe') {
       return;
     }
@@ -896,30 +956,77 @@ export class NgxImageGalleryService {
       return;
     }
 
-    const targetScale =
-      activeSlide.zoomScale === activeSlide.zoomBounds.minScale
-        ? Math.min(activeSlide.zoomBounds.maxScale, 2.5)
-        : activeSlide.zoomBounds.minScale;
+    const targetScale = getNextZoomScale(activeSlide.zoomScale, activeSlide.zoomBounds);
+    this.applyZoomAtPoint(
+      runtime,
+      activeSlide,
+      { x: clientX, y: clientY },
+      { x: clientX, y: clientY },
+      targetScale,
+      activeSlide.pan,
+      activeSlide.zoomScale,
+    );
+  }
 
-    if (targetScale === activeSlide.zoomBounds.minScale) {
-      activeSlide.pan = { x: 0, y: 0 };
-    } else {
-      const centerOffsetX = clientX - runtime.viewport.width / 2;
-      const centerOffsetY = clientY - runtime.viewport.height / 2;
-      activeSlide.pan = clampPan(
-        {
-          x: -centerOffsetX * (targetScale - 1) * 0.35,
-          y: -centerOffsetY * (targetScale - 1) * 0.35,
-        },
-        runtime.viewport,
-        activeSlide.fitted,
-        targetScale,
-      );
+  private onWheel(event: WheelEvent): void {
+    const runtime = this.runtime;
+    const activeSlide = runtime ? this.getActiveSlide(runtime) : null;
+    if (!runtime || !activeSlide || runtime.isOpening || runtime.isClosing || event.deltaY === 0) {
+      return;
     }
 
+    event.preventDefault();
+    const factor = event.deltaY < 0 ? WHEEL_ZOOM_FACTOR : 1 / WHEEL_ZOOM_FACTOR;
+    const targetScale = clamp(
+      activeSlide.zoomScale * factor,
+      activeSlide.zoomBounds.minScale,
+      activeSlide.zoomBounds.maxScale,
+    );
+    this.applyZoomAtPoint(
+      runtime,
+      activeSlide,
+      { x: event.clientX, y: event.clientY },
+      { x: event.clientX, y: event.clientY },
+      targetScale,
+      activeSlide.pan,
+      activeSlide.zoomScale,
+      'interactive',
+    );
+  }
+
+  private applyZoomAtPoint(
+    runtime: GalleryRuntime,
+    activeSlide: SlideRuntime,
+    anchorPoint: GalleryPoint,
+    targetPoint: GalleryPoint,
+    targetScale: number,
+    pan: GalleryPoint,
+    currentScale: number,
+    mode: 'animate' | 'instant' | 'interactive' = 'animate',
+  ): void {
+    activeSlide.pan = calculateZoomPanForPoint({
+      viewport: runtime.viewport,
+      fitted: activeSlide.fitted,
+      anchorPoint,
+      targetPoint,
+      pan,
+      currentScale,
+      targetScale,
+    });
     activeSlide.zoomScale = targetScale;
     activeSlide.userZoomed = targetScale !== activeSlide.zoomBounds.minScale;
-    this.applyMediaLayout(activeSlide, runtime);
+    if (mode === 'interactive') {
+      this.scheduleInteractiveMediaLayout(activeSlide, runtime);
+      return;
+    }
+
+    this.applyMediaLayout(activeSlide, runtime, mode);
+  }
+
+  private preventNativePinch(event: TouchEvent): void {
+    if (event.touches.length > 1) {
+      event.preventDefault();
+    }
   }
 
   private navigateBy(delta: number): void {
@@ -994,6 +1101,10 @@ export class NgxImageGalleryService {
       return;
     }
 
+    if (runtime.mediaFrame !== null) {
+      window.cancelAnimationFrame(runtime.mediaFrame);
+      runtime.mediaFrame = null;
+    }
     runtime.cleanup.forEach((cleanup) => cleanup());
     runtime.cleanup = [];
     runtime.elements.overlay.remove();
@@ -1044,4 +1155,15 @@ export class NgxImageGalleryService {
 
 function distance(first: GalleryPoint, second: GalleryPoint): number {
   return Math.hypot(first.x - second.x, first.y - second.y);
+}
+
+function midpoint(first: GalleryPoint, second: GalleryPoint): GalleryPoint {
+  return {
+    x: (first.x + second.x) / 2,
+    y: (first.y + second.y) / 2,
+  };
+}
+
+function preventDefault(event: Event): void {
+  event.preventDefault();
 }

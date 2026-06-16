@@ -262,6 +262,125 @@ describe('NgxImageGalleryService', () => {
       activeItem: null,
     });
   });
+
+  it('zooms around the selected point and keeps zooming in on repeated double-click', () => {
+    FakeImage.naturalWidthValue = 6400;
+    FakeImage.naturalHeightValue = 3200;
+    service.open([{ fullSrc: 'full-1.jpg', thumbSrc: 'thumb-1.jpg', width: 6400, height: 3200 }]);
+    vi.advanceTimersByTime(333);
+
+    const stage = getStage();
+    const media = getMedia();
+
+    stage.dispatchEvent(createMouseEvent('dblclick', { clientX: 512, clientY: 384 }));
+
+    expect(media.style.transform).toBe('translate3d(-688px, -216px, 0) scale(2.5)');
+
+    stage.dispatchEvent(createMouseEvent('dblclick', { clientX: 512, clientY: 384 }));
+
+    expect(media.style.transform).toBe('translate3d(-1888px, -816px, 0) scale(5)');
+  });
+
+  it('zooms around the mouse wheel point', () => {
+    service.open([{ fullSrc: 'full-1.jpg', thumbSrc: 'thumb-1.jpg', width: 2400, height: 1200 }]);
+    vi.advanceTimersByTime(333);
+
+    const stage = getStage();
+    const media = getMedia();
+    const wheel = createWheelEvent({ clientX: 512, clientY: 384, deltaY: -120 });
+
+    const wasNotPrevented = stage.dispatchEvent(wheel);
+
+    expect(wasNotPrevented).toBe(false);
+    expect(media.style.transform).toBe('translate3d(-88px, 84px, 0) scale(1.25)');
+  });
+
+  it('prevents native page zoom during touch pinch gestures', () => {
+    service.open([{ fullSrc: 'full-1.jpg', thumbSrc: 'thumb-1.jpg', width: 2400, height: 1200 }]);
+    vi.advanceTimersByTime(333);
+
+    const stage = getStage();
+    const touchMove = createTouchEvent('touchmove', 2);
+
+    const wasNotPrevented = stage.dispatchEvent(touchMove);
+
+    expect(wasNotPrevented).toBe(false);
+  });
+
+  it('zooms the image around the touch pinch midpoint', () => {
+    service.open([{ fullSrc: 'full-1.jpg', thumbSrc: 'thumb-1.jpg', width: 2400, height: 1200 }]);
+    vi.advanceTimersByTime(333);
+
+    const stage = getStage();
+    const media = getMedia();
+
+    stage.dispatchEvent(
+      createPointerEvent('pointerdown', { pointerId: 1, clientX: 462, clientY: 384 }),
+    );
+    stage.dispatchEvent(
+      createPointerEvent('pointerdown', { pointerId: 2, clientX: 562, clientY: 384 }),
+    );
+    const pinchMove = createPointerEvent('pointermove', {
+      pointerId: 2,
+      clientX: 612,
+      clientY: 384,
+    });
+
+    const wasNotPrevented = stage.dispatchEvent(pinchMove);
+
+    expect(wasNotPrevented).toBe(false);
+    expect(media.style.transform).toBe('translate3d(-183px, 24px, 0) scale(1.5)');
+  });
+
+  it('does not force synchronous layout on every pinch update', () => {
+    service.open([{ fullSrc: 'full-1.jpg', thumbSrc: 'thumb-1.jpg', width: 2400, height: 1200 }]);
+    vi.advanceTimersByTime(333);
+
+    const stage = getStage();
+    const media = getMedia();
+    const readLayout = vi.spyOn(media, 'getBoundingClientRect');
+
+    stage.dispatchEvent(
+      createPointerEvent('pointerdown', { pointerId: 1, clientX: 462, clientY: 384 }),
+    );
+    stage.dispatchEvent(
+      createPointerEvent('pointerdown', { pointerId: 2, clientX: 562, clientY: 384 }),
+    );
+    stage.dispatchEvent(
+      createPointerEvent('pointermove', { pointerId: 2, clientX: 612, clientY: 384 }),
+    );
+
+    expect(readLayout).not.toHaveBeenCalled();
+  });
+
+  it('restores media transitions after an interactive pinch gesture', () => {
+    service.open([{ fullSrc: 'full-1.jpg', thumbSrc: 'thumb-1.jpg', width: 2400, height: 1200 }]);
+    vi.advanceTimersByTime(333);
+
+    const stage = getStage();
+    const media = getMedia();
+
+    stage.dispatchEvent(
+      createPointerEvent('pointerdown', { pointerId: 1, clientX: 462, clientY: 384 }),
+    );
+    stage.dispatchEvent(
+      createPointerEvent('pointerdown', { pointerId: 2, clientX: 562, clientY: 384 }),
+    );
+    stage.dispatchEvent(
+      createPointerEvent('pointermove', { pointerId: 2, clientX: 612, clientY: 384 }),
+    );
+
+    expect(media.style.transition).toBe('none');
+
+    stage.dispatchEvent(
+      createPointerEvent('pointerup', { pointerId: 1, clientX: 462, clientY: 384 }),
+    );
+    stage.dispatchEvent(
+      createPointerEvent('pointerup', { pointerId: 2, clientX: 612, clientY: 384 }),
+    );
+
+    expect(media.style.transition).toBe('');
+  });
 });
 
 interface OriginElementOptions {
@@ -293,4 +412,68 @@ function createOriginElement(options: OriginElementOptions = {}): HTMLElement {
   }
   document.body.appendChild(origin);
   return origin;
+}
+
+function getStage(): HTMLDivElement {
+  const stage = document.querySelector<HTMLDivElement>('.ngx-image-gallery-stage');
+  if (!stage) {
+    throw new Error('Expected gallery stage to exist');
+  }
+  return stage;
+}
+
+function getMedia(): HTMLDivElement {
+  const media = document.querySelector<HTMLDivElement>('.ngx-image-gallery-media');
+  if (!media) {
+    throw new Error('Expected gallery media to exist');
+  }
+  return media;
+}
+
+function createMouseEvent(
+  eventName: string,
+  options: Pick<MouseEventInit, 'clientX' | 'clientY'>,
+): MouseEvent {
+  return new MouseEvent(eventName, {
+    ...options,
+    bubbles: true,
+    cancelable: true,
+  });
+}
+
+function createWheelEvent(
+  options: Pick<WheelEventInit, 'clientX' | 'clientY' | 'deltaY'>,
+): WheelEvent {
+  return new WheelEvent('wheel', {
+    ...options,
+    bubbles: true,
+    cancelable: true,
+  });
+}
+
+function createPointerEvent(
+  eventName: string,
+  options: { pointerId: number; clientX: number; clientY: number },
+): PointerEvent {
+  const event = new Event(eventName, {
+    bubbles: true,
+    cancelable: true,
+  });
+  Object.defineProperties(event, {
+    pointerId: { value: options.pointerId },
+    clientX: { value: options.clientX },
+    clientY: { value: options.clientY },
+  });
+  return event as PointerEvent;
+}
+
+function createTouchEvent(eventName: string, touchCount: number): Event {
+  const event = new Event(eventName, {
+    bubbles: true,
+    cancelable: true,
+  });
+  Object.defineProperty(event, 'touches', {
+    value: Array.from({ length: touchCount }, () => ({})),
+  });
+  return event;
 }

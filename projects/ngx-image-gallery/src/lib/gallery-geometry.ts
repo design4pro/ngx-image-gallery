@@ -25,7 +25,19 @@ export interface ZoomBounds {
   initialScale: number;
 }
 
+export interface ZoomPanForPointInput {
+  viewport: GallerySize;
+  fitted: GalleryRect;
+  anchorPoint: GalleryPoint;
+  targetPoint: GalleryPoint;
+  pan: GalleryPoint;
+  currentScale: number;
+  targetScale: number;
+}
+
 const DEFAULT_ASPECT_RATIO = 1;
+const INITIAL_ZOOM_SCALE = 2.5;
+const REPEATED_ZOOM_FACTOR = 2;
 
 export function getImageSource(item: NgxImageGalleryItem, originElement?: HTMLElement): string {
   if (item.thumbSrc) {
@@ -126,6 +138,53 @@ export function calculateZoomBounds(source: GallerySize, fitted: GallerySize): Z
   };
 }
 
+export function getNextZoomScale(currentScale: number, bounds: ZoomBounds): number {
+  if (currentScale >= bounds.maxScale) {
+    return bounds.minScale;
+  }
+
+  const nextScale =
+    currentScale <= bounds.minScale
+      ? bounds.minScale * INITIAL_ZOOM_SCALE
+      : currentScale * REPEATED_ZOOM_FACTOR;
+
+  return clamp(nextScale, bounds.minScale, bounds.maxScale);
+}
+
+export function getScaledOrigin(fitted: GalleryRect, scale: number): GalleryPoint {
+  return {
+    x: fitted.x - (fitted.width * (scale - 1)) / 2,
+    y: fitted.y - (fitted.height * (scale - 1)) / 2,
+  };
+}
+
+export function calculateZoomPanForPoint({
+  viewport,
+  fitted,
+  anchorPoint,
+  targetPoint,
+  pan,
+  currentScale,
+  targetScale,
+}: ZoomPanForPointInput): GalleryPoint {
+  const currentOrigin = getScaledOrigin(fitted, currentScale);
+  const targetOrigin = getScaledOrigin(fitted, targetScale);
+  const imagePoint = {
+    x: clamp((anchorPoint.x - currentOrigin.x - pan.x) / currentScale, 0, fitted.width),
+    y: clamp((anchorPoint.y - currentOrigin.y - pan.y) / currentScale, 0, fitted.height),
+  };
+
+  return clampPan(
+    {
+      x: targetPoint.x - targetOrigin.x - imagePoint.x * targetScale,
+      y: targetPoint.y - targetOrigin.y - imagePoint.y * targetScale,
+    },
+    viewport,
+    fitted,
+    targetScale,
+  );
+}
+
 export function clampPan(
   pan: GalleryPoint,
   viewport: GallerySize,
@@ -142,7 +201,8 @@ export function clampPan(
 }
 
 export function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
+  const clamped = Math.min(Math.max(value, min), max);
+  return Object.is(clamped, -0) ? 0 : clamped;
 }
 
 function isPositiveNumber(value: number | undefined): value is number {

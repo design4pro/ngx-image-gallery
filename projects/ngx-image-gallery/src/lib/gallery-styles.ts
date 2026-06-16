@@ -9,6 +9,7 @@ export const GALLERY_STYLES = `
   font-family: Arial, Helvetica, sans-serif;
   outline: none;
   touch-action: none;
+  overscroll-behavior: contain;
 }
 .ngx-image-gallery-overlay,
 .ngx-image-gallery-overlay * {
@@ -57,6 +58,7 @@ export const GALLERY_STYLES = `
   position: absolute;
   transform-origin: 0 0;
   will-change: transform, width, height;
+  touch-action: none;
   transition:
     transform 333ms cubic-bezier(.4, 0, .22, 1),
     width 333ms cubic-bezier(.4, 0, .22, 1),
@@ -72,6 +74,7 @@ export const GALLERY_STYLES = `
   object-fit: contain;
   user-select: none;
   -webkit-user-drag: none;
+  touch-action: none;
 }
 .ngx-image-gallery-thumb {
   filter: blur(0);
