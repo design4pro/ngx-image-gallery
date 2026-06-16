@@ -56,8 +56,11 @@ export const GALLERY_STYLES = `
 .ngx-image-gallery-media {
   position: absolute;
   transform-origin: 0 0;
-  will-change: transform;
-  transition: transform 333ms cubic-bezier(.4, 0, .22, 1);
+  will-change: transform, width, height;
+  transition:
+    transform 333ms cubic-bezier(.4, 0, .22, 1),
+    width 333ms cubic-bezier(.4, 0, .22, 1),
+    height 333ms cubic-bezier(.4, 0, .22, 1);
   user-select: none;
 }
 .ngx-image-gallery-image {
@@ -72,6 +75,9 @@ export const GALLERY_STYLES = `
 }
 .ngx-image-gallery-thumb {
   filter: blur(0);
+}
+.ngx-image-gallery-media.ngx-image-gallery-origin-crop .ngx-image-gallery-image {
+  object-fit: cover;
 }
 .ngx-image-gallery-full {
   opacity: 0;

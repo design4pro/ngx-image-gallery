@@ -5,6 +5,7 @@ import {
   clamp,
   clampPan,
   fitIntoViewport,
+  findImageElement,
   getImageSource,
   resolveImageDimensions,
   type GalleryPoint,
@@ -94,6 +95,11 @@ const ANIMATION_DURATION_MS = 333;
 const NAVIGATION_DURATION_MS = 220;
 const SWIPE_THRESHOLD_PX = 60;
 const VIEWPORT_PADDING_PX = 32;
+const ORIGIN_RATIO_TOLERANCE = 0.01;
+
+interface OriginCrop {
+  objectPosition: string;
+}
 
 @Injectable({ providedIn: 'root' })
 export class NgxImageGalleryService {
@@ -491,6 +497,11 @@ export class NgxImageGalleryService {
       return;
     }
 
+    const activeSlide = this.getActiveSlide(runtime);
+    if (activeSlide) {
+      this.clearOriginCrop(activeSlide);
+    }
+
     runtime.isOpening = false;
     runtime.openTimer = null;
     runtime.elements.stage.focus({ preventScroll: true });
@@ -507,13 +518,87 @@ export class NgxImageGalleryService {
       return;
     }
 
+    const originCrop = this.getOriginCrop(slide, origin);
     slide.elements.media.style.transition = immediate ? 'none' : '';
-    slide.elements.media.style.width = `${slide.fitted.width}px`;
-    slide.elements.media.style.height = `${slide.fitted.height}px`;
-    slide.elements.media.style.transform = `translate3d(${origin.left}px, ${origin.top}px, 0) scale(${origin.width / slide.fitted.width})`;
+    if (originCrop) {
+      this.applyOriginCrop(slide, originCrop);
+      slide.elements.media.style.width = `${origin.width}px`;
+      slide.elements.media.style.height = `${origin.height}px`;
+      slide.elements.media.style.transform = `translate3d(${origin.left}px, ${origin.top}px, 0) scale(1)`;
+    } else {
+      this.clearOriginCrop(slide);
+      slide.elements.media.style.width = `${slide.fitted.width}px`;
+      slide.elements.media.style.height = `${slide.fitted.height}px`;
+      slide.elements.media.style.transform = `translate3d(${origin.left}px, ${origin.top}px, 0) scale(${origin.width / slide.fitted.width})`;
+    }
 
     if (immediate) {
       slide.elements.media.getBoundingClientRect();
+    }
+  }
+
+  private getOriginCrop(slide: SlideRuntime, origin: DOMRect): OriginCrop | null {
+    if (!slide.originElement || slide.item.thumbCropped === false) {
+      return null;
+    }
+
+    const originImage = findImageElement(slide.originElement);
+    const shouldCrop =
+      slide.item.thumbCropped === true ||
+      (slide.item.thumbCropped === undefined &&
+        originImage !== null &&
+        this.isCroppedOrigin(originImage, origin, slide));
+
+    if (!shouldCrop) {
+      return null;
+    }
+
+    return {
+      objectPosition: originImage
+        ? this.getOriginObjectPosition(originImage)
+        : '50% 50%',
+    };
+  }
+
+  private isCroppedOrigin(
+    originImage: HTMLImageElement,
+    origin: DOMRect,
+    slide: SlideRuntime,
+  ): boolean {
+    if (getComputedStyle(originImage).objectFit !== 'cover') {
+      return false;
+    }
+
+    const originRatio = origin.width / origin.height;
+    const mediaRatio = slide.fitted.width / slide.fitted.height;
+    return Math.abs(originRatio / mediaRatio - 1) > ORIGIN_RATIO_TOLERANCE;
+  }
+
+  private getOriginObjectPosition(originImage: HTMLImageElement): string {
+    return getComputedStyle(originImage).objectPosition || '50% 50%';
+  }
+
+  private applyOriginCrop(slide: SlideRuntime, originCrop: OriginCrop): void {
+    if (!slide.elements) {
+      return;
+    }
+
+    slide.elements.media.classList.add('ngx-image-gallery-origin-crop');
+    slide.elements.thumbImage.style.objectPosition = originCrop.objectPosition;
+    if (slide.elements.fullImage) {
+      slide.elements.fullImage.style.objectPosition = originCrop.objectPosition;
+    }
+  }
+
+  private clearOriginCrop(slide: SlideRuntime): void {
+    if (!slide.elements) {
+      return;
+    }
+
+    slide.elements.media.classList.remove('ngx-image-gallery-origin-crop');
+    slide.elements.thumbImage.style.objectPosition = '';
+    if (slide.elements.fullImage) {
+      slide.elements.fullImage.style.objectPosition = '';
     }
   }
 

@@ -4,13 +4,15 @@ import { provideNgxImageGallery } from './gallery-types';
 
 class FakeImage {
   static requests: string[] = [];
+  static naturalWidthValue = 2400;
+  static naturalHeightValue = 1200;
 
   onload: (() => void) | null = null;
   onerror: (() => void) | null = null;
-  naturalWidth = 2400;
-  naturalHeight = 1200;
-  width = 2400;
-  height = 1200;
+  naturalWidth = FakeImage.naturalWidthValue;
+  naturalHeight = FakeImage.naturalHeightValue;
+  width = FakeImage.naturalWidthValue;
+  height = FakeImage.naturalHeightValue;
   currentSrc = '';
   sizes = '';
   srcset = '';
@@ -36,6 +38,8 @@ describe('NgxImageGalleryService', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     FakeImage.requests = [];
+    FakeImage.naturalWidthValue = 2400;
+    FakeImage.naturalHeightValue = 1200;
     originalAnimationFrame = window.requestAnimationFrame;
     window.requestAnimationFrame = (callback: FrameRequestCallback): number => {
       callback(0);
@@ -106,6 +110,117 @@ describe('NgxImageGalleryService', () => {
     expect(media?.style.transform).toContain('translate3d(32px, 144px, 0) scale(1)');
   });
 
+  it('starts opening cropped thumbnails from the exact origin box', () => {
+    const origin = createOriginElement({
+      rect: { width: 200, height: 150, top: 20, left: 30 },
+      objectFit: 'cover',
+      objectPosition: '25% 75%',
+    });
+    const frameCallbacks: FrameRequestCallback[] = [];
+    window.requestAnimationFrame = (callback: FrameRequestCallback): number => {
+      frameCallbacks.push(callback);
+      return 1;
+    };
+
+    service.open(
+      [{ fullSrc: 'full-1.jpg', thumbSrc: 'thumb-1.jpg', width: 2400, height: 1600 }],
+      0,
+      { originElement: origin, originElements: [origin] },
+    );
+
+    const media = document.querySelector<HTMLDivElement>('.ngx-image-gallery-media');
+    const thumb = document.querySelector<HTMLImageElement>('.ngx-image-gallery-thumb');
+    expect(media?.classList.contains('ngx-image-gallery-origin-crop')).toBe(true);
+    expect(media?.style.width).toBe('200px');
+    expect(media?.style.height).toBe('150px');
+    expect(media?.style.transform).toContain('translate3d(30px, 20px, 0) scale(1)');
+    expect(thumb?.style.objectPosition).toBe('25% 75%');
+
+    frameCallbacks[0]?.(0);
+
+    expect(media?.classList.contains('ngx-image-gallery-origin-crop')).toBe(true);
+    expect(media?.style.width).toBe('960px');
+    expect(media?.style.height).toBe('640px');
+    expect(media?.style.transform).toContain('translate3d(32px, 64px, 0) scale(1)');
+
+    vi.advanceTimersByTime(333);
+
+    expect(media?.classList.contains('ngx-image-gallery-origin-crop')).toBe(false);
+    expect(thumb?.style.objectPosition).toBe('');
+  });
+
+  it('closes cropped thumbnails to the exact origin box', () => {
+    FakeImage.naturalWidthValue = 2400;
+    FakeImage.naturalHeightValue = 1600;
+    const origin = createOriginElement({
+      rect: { width: 200, height: 150, top: 20, left: 30 },
+      objectPosition: '20% 80%',
+    });
+
+    service.open(
+      [
+        {
+          fullSrc: 'full-1.jpg',
+          thumbSrc: 'thumb-1.jpg',
+          width: 2400,
+          height: 1600,
+          thumbCropped: true,
+        },
+      ],
+      0,
+      { originElement: origin, originElements: [origin] },
+    );
+    vi.advanceTimersByTime(333);
+
+    service.close();
+
+    const media = document.querySelector<HTMLDivElement>('.ngx-image-gallery-media');
+    const thumb = document.querySelector<HTMLImageElement>('.ngx-image-gallery-thumb');
+    expect(media?.classList.contains('ngx-image-gallery-origin-crop')).toBe(true);
+    expect(media?.style.width).toBe('200px');
+    expect(media?.style.height).toBe('150px');
+    expect(media?.style.transform).toContain('translate3d(30px, 20px, 0) scale(1)');
+    expect(thumb?.style.objectPosition).toBe('20% 80%');
+  });
+
+  it('keeps the uniform origin scale when cropped thumbnail handling is disabled', () => {
+    const origin = createOriginElement({
+      rect: { width: 200, height: 150, top: 20, left: 30 },
+      objectFit: 'cover',
+    });
+    const frameCallbacks: FrameRequestCallback[] = [];
+    window.requestAnimationFrame = (callback: FrameRequestCallback): number => {
+      frameCallbacks.push(callback);
+      return 1;
+    };
+
+    service.open(
+      [
+        {
+          fullSrc: 'full-1.jpg',
+          thumbSrc: 'thumb-1.jpg',
+          width: 2400,
+          height: 1600,
+          thumbCropped: false,
+        },
+      ],
+      0,
+      { originElement: origin, originElements: [origin] },
+    );
+
+    const media = document.querySelector<HTMLDivElement>('.ngx-image-gallery-media');
+    expect(media?.classList.contains('ngx-image-gallery-origin-crop')).toBe(false);
+    expect(media?.style.width).toBe('960px');
+    expect(media?.style.height).toBe('640px');
+    expect(media?.style.transform).toContain(
+      'translate3d(30px, 20px, 0) scale(0.20833333333333334)',
+    );
+
+    frameCallbacks[0]?.(0);
+
+    expect(media?.style.transform).toContain('translate3d(32px, 64px, 0) scale(1)');
+  });
+
   it('loads the full image only after a slide becomes active', () => {
     const origins = [createOriginElement(), createOriginElement()];
 
@@ -149,11 +264,33 @@ describe('NgxImageGalleryService', () => {
   });
 });
 
-function createOriginElement(): HTMLElement {
+interface OriginElementOptions {
+  rect?: {
+    width: number;
+    height: number;
+    top: number;
+    left: number;
+  };
+  objectFit?: string;
+  objectPosition?: string;
+}
+
+function createOriginElement(options: OriginElementOptions = {}): HTMLElement {
+  const rect = options.rect ?? { width: 200, height: 100, top: 20, left: 30 };
   const origin = document.createElement('a');
   Object.defineProperty(origin, 'getBoundingClientRect', {
-    value: () => ({ width: 200, height: 100, top: 20, left: 30, right: 230, bottom: 120 }),
+    value: () => ({
+      ...rect,
+      right: rect.left + rect.width,
+      bottom: rect.top + rect.height,
+    }),
   });
+  if (options.objectFit || options.objectPosition) {
+    const image = document.createElement('img');
+    image.style.objectFit = options.objectFit ?? '';
+    image.style.objectPosition = options.objectPosition ?? '';
+    origin.appendChild(image);
+  }
   document.body.appendChild(origin);
   return origin;
 }
