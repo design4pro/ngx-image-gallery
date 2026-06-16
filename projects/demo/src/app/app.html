@@ -1,0 +1,14 @@
+<main class="gallery-shell">
+  <header class="gallery-header">
+    <h1>{{ title() }}</h1>
+    <p>Native Angular progressive image gallery without PhotoSwipe as a dependency.</p>
+  </header>
+
+  <section class="photo-grid" ngxImageGallery>
+    @for (photo of photos; track photo.fullSrc) {
+      <a class="photo-tile" [href]="photo.fullSrc" [ngxImageGalleryItem]="photo">
+        <img [src]="photo.thumbSrc" [alt]="photo.alt" loading="lazy" />
+      </a>
+    }
+  </section>
+</main>
