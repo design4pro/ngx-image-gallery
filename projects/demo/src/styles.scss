@@ -30,6 +30,9 @@ body {
   --ngx-image-gallery-control-offset: 18px;
   --ngx-image-gallery-control-focus-outline: 2px solid #38bdf8;
   --ngx-image-gallery-counter-padding: 0 14px;
+  --ngx-image-gallery-thumbnail-active-border-color: #38bdf8;
+  --ngx-image-gallery-thumbnail-border-radius: 10px;
+  --ngx-image-gallery-thumbnail-size: 72px;
   --ngx-image-gallery-status-background: color-mix(in srgb, #09111f 72%, transparent);
   --ngx-image-gallery-status-border-radius: 999px;
 }

@@ -55,6 +55,7 @@ export class App {
   protected readonly tailwindPhotos = this.photos.slice(2);
 
   protected readonly cssPropertiesOptions: Partial<NgxImageGalleryOpenOptions> = {
+    showThumbnails: true,
     classes: {
       overlay: 'css-properties-lightbox',
     },

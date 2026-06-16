@@ -33,6 +33,9 @@ export interface NgxImageGalleryClasses {
   previousButton?: NgxImageGalleryClassValue;
   nextButton?: NgxImageGalleryClassValue;
   counter?: NgxImageGalleryClassValue;
+  thumbnails?: NgxImageGalleryClassValue;
+  thumbnailButton?: NgxImageGalleryClassValue;
+  thumbnailImage?: NgxImageGalleryClassValue;
   loading?: NgxImageGalleryClassValue;
   error?: NgxImageGalleryClassValue;
 }
@@ -44,6 +47,7 @@ export interface NgxImageGalleryOptions {
   closeOnEsc: boolean;
   closeOnBackdrop: boolean;
   showCounter: boolean;
+  showThumbnails: boolean;
   classes: NgxImageGalleryClasses;
 }
 
@@ -85,6 +89,7 @@ export const DEFAULT_NGX_IMAGE_GALLERY_OPTIONS: NgxImageGalleryOptions = {
   closeOnEsc: true,
   closeOnBackdrop: true,
   showCounter: true,
+  showThumbnails: false,
   classes: {},
 };
 

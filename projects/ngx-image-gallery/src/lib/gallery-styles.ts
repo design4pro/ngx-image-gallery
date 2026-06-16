@@ -18,6 +18,15 @@ export const GALLERY_STYLES = `
   --ngx-image-gallery-control-focus-outline: 2px solid #fff;
   --ngx-image-gallery-counter-padding: 0 12px;
   --ngx-image-gallery-counter-font-size: 14px;
+  --ngx-image-gallery-thumbnails-gap: 8px;
+  --ngx-image-gallery-thumbnails-padding: 0 16px 16px;
+  --ngx-image-gallery-thumbnail-size: 64px;
+  --ngx-image-gallery-thumbnail-border: 2px solid transparent;
+  --ngx-image-gallery-thumbnail-active-border-color: #fff;
+  --ngx-image-gallery-thumbnail-border-radius: 4px;
+  --ngx-image-gallery-thumbnail-background: rgba(255, 255, 255, 0.08);
+  --ngx-image-gallery-thumbnail-opacity: 0.68;
+  --ngx-image-gallery-thumbnail-active-opacity: 1;
   --ngx-image-gallery-status-background: rgba(20, 20, 20, 0.56);
   --ngx-image-gallery-status-border-radius: 4px;
   --ngx-image-gallery-status-padding: 8px 12px;
@@ -186,6 +195,47 @@ export const GALLERY_STYLES = `
   padding: var(--ngx-image-gallery-counter-padding);
   font-size: var(--ngx-image-gallery-counter-font-size);
 }
+.ngx-image-gallery-thumbnails {
+  pointer-events: auto;
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  gap: var(--ngx-image-gallery-thumbnails-gap);
+  align-items: center;
+  justify-content: center;
+  overflow-x: auto;
+  padding: var(--ngx-image-gallery-thumbnails-padding);
+  scrollbar-width: thin;
+}
+.ngx-image-gallery-thumbnail {
+  display: block;
+  flex: 0 0 auto;
+  width: var(--ngx-image-gallery-thumbnail-size);
+  height: var(--ngx-image-gallery-thumbnail-size);
+  overflow: hidden;
+  border: var(--ngx-image-gallery-thumbnail-border);
+  border-radius: var(--ngx-image-gallery-thumbnail-border-radius);
+  padding: 0;
+  background: var(--ngx-image-gallery-thumbnail-background);
+  opacity: var(--ngx-image-gallery-thumbnail-opacity);
+  cursor: pointer;
+}
+.ngx-image-gallery-thumbnail-active {
+  border-color: var(--ngx-image-gallery-thumbnail-active-border-color);
+  opacity: var(--ngx-image-gallery-thumbnail-active-opacity);
+}
+.ngx-image-gallery-thumbnail:focus-visible {
+  outline: var(--ngx-image-gallery-control-focus-outline);
+  outline-offset: 2px;
+}
+.ngx-image-gallery-thumbnail-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 .ngx-image-gallery-loading,
 .ngx-image-gallery-error {
   position: absolute;
@@ -201,6 +251,10 @@ export const GALLERY_STYLES = `
   transition: var(--ngx-image-gallery-ui-transition);
   pointer-events: none;
 }
+.ngx-image-gallery-has-thumbnails .ngx-image-gallery-loading,
+.ngx-image-gallery-has-thumbnails .ngx-image-gallery-error {
+  bottom: calc(var(--ngx-image-gallery-thumbnail-size) + 40px);
+}
 .ngx-image-gallery-loading.ngx-image-gallery-visible,
 .ngx-image-gallery-error.ngx-image-gallery-visible {
   opacity: 1;
@@ -210,6 +264,7 @@ export const GALLERY_STYLES = `
   .ngx-image-gallery-media,
   .ngx-image-gallery-full,
   .ngx-image-gallery-ui,
+  .ngx-image-gallery-thumbnail,
   .ngx-image-gallery-loading,
   .ngx-image-gallery-error {
     transition: none;

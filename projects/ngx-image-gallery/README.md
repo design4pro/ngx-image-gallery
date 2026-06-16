@@ -9,6 +9,7 @@ Native Angular image gallery with a PhotoSwipe-like lightbox experience, progres
 - Stable generated class hooks and CSS custom properties for lightbox styling.
 - Optional configured classes for generated lightbox elements.
 - Optional custom lightbox template with state and command context.
+- Optional lightbox thumbnail strip.
 - Smooth opening animation from the clicked thumbnail.
 - No required original image dimensions.
 - Provisional sizing from the thumbnail, followed by recalculation from `naturalWidth` and `naturalHeight` after the original image loads.
@@ -35,6 +36,7 @@ export const appConfig: ApplicationConfig = {
       closeOnEsc: true,
       closeOnBackdrop: true,
       showCounter: true,
+      showThumbnails: false,
       classes: {
         overlay: 'brand-lightbox',
       },
@@ -77,7 +79,24 @@ readonly galleryOptions = {
   --ngx-image-gallery-control-background: rgb(255 255 255 / 16%);
   --ngx-image-gallery-control-border-radius: 999px;
   --ngx-image-gallery-control-focus-outline: 2px solid #38bdf8;
+  --ngx-image-gallery-thumbnail-active-border-color: #38bdf8;
 }
+```
+
+## Lightbox thumbnails
+
+Enable the default thumbnail strip with `showThumbnails`. The strip uses each item's `thumbSrc`, falling back to `fullSrc` when no thumbnail source is provided.
+
+```ts
+readonly galleryOptions = {
+  showThumbnails: true,
+};
+```
+
+```html
+<div ngxImageGallery [ngxImageGallery]="galleryOptions">
+  <!-- items -->
+</div>
 ```
 
 ## Tailwind classes
@@ -199,6 +218,9 @@ The `classes` option can add classes to:
 - `previousButton`
 - `nextButton`
 - `counter`
+- `thumbnails`
+- `thumbnailButton`
+- `thumbnailImage`
 - `loading`
 - `error`
 

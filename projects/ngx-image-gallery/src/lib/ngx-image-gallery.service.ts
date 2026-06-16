@@ -75,6 +75,7 @@ interface OverlayElements {
   prevButton: HTMLButtonElement;
   nextButton: HTMLButtonElement;
   counter: HTMLDivElement;
+  thumbnails: HTMLDivElement;
   loading: HTMLDivElement;
   error: HTMLDivElement;
 }
@@ -244,12 +245,12 @@ export class NgxImageGalleryService {
       return;
     }
 
-    const normalized = this.normalizeIndex(runtime, index);
+    const normalized = this.normalizeIndex(runtime, Math.trunc(index));
     if (normalized === null || normalized === runtime.activeIndex) {
       return;
     }
 
-    this.navigateBy(normalized > runtime.activeIndex ? 1 : -1);
+    this.navigateBy(normalized - runtime.activeIndex);
   }
 
   private mergeOptions(options: Partial<NgxImageGalleryOptions>): NgxImageGalleryOptions {
@@ -310,6 +311,7 @@ export class NgxImageGalleryService {
     overlay.className = 'ngx-image-gallery-overlay';
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-modal', 'true');
+    overlay.classList.toggle('ngx-image-gallery-has-thumbnails', options.showThumbnails);
     this.addClassNames(overlay, options.classes.overlay);
 
     const backdrop = this.document.createElement('div');
@@ -364,6 +366,12 @@ export class NgxImageGalleryService {
     counter.setAttribute('aria-live', 'polite');
     this.addClassNames(counter, options.classes.counter);
 
+    const thumbnails = this.document.createElement('div');
+    thumbnails.className = 'ngx-image-gallery-thumbnails';
+    thumbnails.setAttribute('role', 'toolbar');
+    thumbnails.setAttribute('aria-label', 'Gallery thumbnails');
+    this.addClassNames(thumbnails, options.classes.thumbnails);
+
     const loading = this.document.createElement('div');
     loading.className = 'ngx-image-gallery-loading';
     loading.textContent = 'Loading image';
@@ -374,7 +382,11 @@ export class NgxImageGalleryService {
     error.textContent = 'Image could not be loaded';
     this.addClassNames(error, options.classes.error);
 
-    defaultUi.append(counter, closeButton, prevButton, nextButton, loading, error);
+    defaultUi.append(counter, closeButton, prevButton, nextButton);
+    if (options.showThumbnails) {
+      defaultUi.appendChild(thumbnails);
+    }
+    defaultUi.append(loading, error);
     ui.append(defaultUi, customUi);
     stage.appendChild(track);
     overlay.append(backdrop, stage, ui);
@@ -391,6 +403,7 @@ export class NgxImageGalleryService {
       prevButton,
       nextButton,
       counter,
+      thumbnails,
       loading,
       error,
     };
@@ -1317,7 +1330,63 @@ export class NgxImageGalleryService {
       'ngx-image-gallery-visible',
       Boolean(activeSlide?.fullError),
     );
+    this.renderThumbnails(runtime);
     this.updateCustomLightbox(runtime);
+  }
+
+  private renderThumbnails(runtime: GalleryRuntime): void {
+    if (!runtime.options.showThumbnails) {
+      return;
+    }
+
+    if (runtime.elements.thumbnails.childElementCount !== runtime.items.length) {
+      runtime.elements.thumbnails.textContent = '';
+      runtime.items.forEach((item, index) => {
+        runtime.elements.thumbnails.appendChild(this.createThumbnailButton(runtime, item, index));
+      });
+    }
+
+    Array.from(
+      runtime.elements.thumbnails.querySelectorAll<HTMLButtonElement>(
+        '.ngx-image-gallery-thumbnail',
+      ),
+    ).forEach((button, index) => {
+      const isActive = index === runtime.activeIndex;
+      button.classList.toggle('ngx-image-gallery-thumbnail-active', isActive);
+      if (isActive) {
+        button.setAttribute('aria-current', 'true');
+      } else {
+        button.removeAttribute('aria-current');
+      }
+    });
+  }
+
+  private createThumbnailButton(
+    runtime: GalleryRuntime,
+    item: NgxImageGalleryItem,
+    index: number,
+  ): HTMLButtonElement {
+    const button = this.document.createElement('button');
+    button.type = 'button';
+    button.className = 'ngx-image-gallery-thumbnail';
+    button.setAttribute('aria-label', this.getThumbnailLabel(item, index));
+    this.addClassNames(button, runtime.options.classes.thumbnailButton);
+
+    const image = this.document.createElement('img');
+    image.className = 'ngx-image-gallery-thumbnail-image';
+    image.alt = '';
+    image.draggable = false;
+    image.src = item.thumbSrc ?? item.fullSrc;
+    this.addClassNames(image, runtime.options.classes.thumbnailImage);
+
+    button.appendChild(image);
+    this.listen(runtime, button, 'click', () => this.goTo(index));
+    return button;
+  }
+
+  private getThumbnailLabel(item: NgxImageGalleryItem, index: number): string {
+    const ordinal = index + 1;
+    return item.alt ? `Show image ${ordinal}: ${item.alt}` : `Show image ${ordinal}`;
   }
 
   private updateState(runtime: GalleryRuntime): void {

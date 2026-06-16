@@ -287,6 +287,77 @@ describe('NgxImageGalleryService', () => {
     ).toBe(true);
   });
 
+  it('does not render lightbox thumbnails by default', () => {
+    service.open([
+      { fullSrc: 'full-1.jpg', thumbSrc: 'thumb-1.jpg' },
+      { fullSrc: 'full-2.jpg', thumbSrc: 'thumb-2.jpg' },
+    ]);
+
+    expect(document.querySelector('.ngx-image-gallery-thumbnails')).toBeFalsy();
+  });
+
+  it('renders configured thumbnail classes when lightbox thumbnails are enabled', () => {
+    service.open(
+      [
+        { fullSrc: 'full-1.jpg', thumbSrc: 'thumb-1.jpg' },
+        { fullSrc: 'full-2.jpg', thumbSrc: 'thumb-2.jpg' },
+      ],
+      0,
+      {
+        showThumbnails: true,
+        classes: {
+          thumbnails: 'tailwind-thumbnails',
+          thumbnailButton: 'tailwind-thumbnail-button',
+          thumbnailImage: 'tailwind-thumbnail-image',
+        },
+      },
+    );
+
+    expect(
+      document
+        .querySelector('.ngx-image-gallery-thumbnails')
+        ?.classList.contains('tailwind-thumbnails'),
+    ).toBe(true);
+    expect(
+      document
+        .querySelector('.ngx-image-gallery-thumbnail')
+        ?.classList.contains('tailwind-thumbnail-button'),
+    ).toBe(true);
+    expect(
+      document
+        .querySelector('.ngx-image-gallery-thumbnail-image')
+        ?.classList.contains('tailwind-thumbnail-image'),
+    ).toBe(true);
+  });
+
+  it('opens clicked lightbox thumbnails by index', () => {
+    service.open(
+      [
+        { fullSrc: 'full-1.jpg', thumbSrc: 'thumb-1.jpg', alt: 'First image' },
+        { fullSrc: 'full-2.jpg', thumbSrc: 'thumb-2.jpg', alt: 'Second image' },
+        { fullSrc: 'full-3.jpg', thumbSrc: 'thumb-3.jpg', alt: 'Third image' },
+      ],
+      0,
+      { showThumbnails: true },
+    );
+    vi.advanceTimersByTime(333);
+
+    const thumbnails = Array.from(
+      document.querySelectorAll<HTMLButtonElement>('.ngx-image-gallery-thumbnail'),
+    );
+    expect(thumbnails).toHaveLength(3);
+    expect(thumbnails[0]?.classList.contains('ngx-image-gallery-thumbnail-active')).toBe(true);
+    expect(thumbnails[0]?.getAttribute('aria-current')).toBe('true');
+    expect(thumbnails[2]?.getAttribute('aria-label')).toBe('Show image 3: Third image');
+
+    thumbnails[2]?.dispatchEvent(createMouseEvent('click', { clientX: 0, clientY: 0 }));
+    vi.advanceTimersByTime(220);
+
+    expect(service.activeIndex()).toBe(2);
+    expect(thumbnails[2]?.classList.contains('ngx-image-gallery-thumbnail-active')).toBe(true);
+    expect(thumbnails[2]?.getAttribute('aria-current')).toBe('true');
+  });
+
   it('zooms around the selected point and keeps zooming in on repeated double-click', () => {
     FakeImage.naturalWidthValue = 6400;
     FakeImage.naturalHeightValue = 3200;
