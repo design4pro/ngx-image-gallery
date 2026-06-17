@@ -47,6 +47,14 @@ export class NgxImageGalleryDirective implements OnDestroy {
     this.lightboxDirective = null;
   }
 
+  ownsActiveLightbox(): boolean {
+    return this.gallery.isOpenOwnedBy(this.owner);
+  }
+
+  close(animate = true): void {
+    this.gallery.closeOwnedBy(this.owner, animate);
+  }
+
   open(index = 0): void {
     const items = this.getItems();
     if (items.length === 0) {
@@ -86,7 +94,7 @@ export class NgxImageGalleryDirective implements OnDestroy {
     );
   }
 
-  private getItems(): NgxImageGalleryItem[] {
+  getItems(): NgxImageGalleryItem[] {
     return this.itemDirectives.map((item) => item.galleryItem);
   }
 

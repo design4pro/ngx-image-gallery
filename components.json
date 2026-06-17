@@ -1,0 +1,4 @@
+{
+  "componentsPath": "projects/demo/src/app/shared/ui",
+  "importAlias": "@demo/ui"
+}

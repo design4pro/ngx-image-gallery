@@ -39,7 +39,7 @@ describe('App', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
 
-    expect(compiled.querySelector('h1')?.textContent).toContain('ngx-image-gallery');
+    expect(compiled.querySelector('header')?.textContent).toContain('ngx-image-gallery');
     expect(compiled.querySelectorAll('.gallery-nav a').length).toBe(3);
     expect(compiled.querySelector('#route-content')?.textContent).toContain('Route content');
   });

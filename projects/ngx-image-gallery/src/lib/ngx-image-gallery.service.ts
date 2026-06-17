@@ -240,6 +240,10 @@ export class NgxImageGalleryService {
     }
   }
 
+  isOpenOwnedBy(owner: object): boolean {
+    return this.runtime?.owner === owner;
+  }
+
   next(): void {
     this.navigateBy(1);
   }
