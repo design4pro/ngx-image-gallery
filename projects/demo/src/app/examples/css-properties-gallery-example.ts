@@ -10,20 +10,69 @@ import { DEMO_PHOTOS } from './demo-photos';
   selector: 'app-css-properties-gallery-example',
   imports: [NgxImageGalleryDirective, NgxImageGalleryItemDirective],
   template: `
-    <section class="example-section">
-      <div class="example-heading">
-        <h2>Custom properties</h2>
-        <p>Default lightbox structure, application-owned CSS variables.</p>
-      </div>
-
-      <div class="photo-grid css-grid" ngxImageGallery [ngxImageGallery]="options">
+    <section class="css-gallery-demo" aria-label="Custom properties gallery demo">
+      <div class="css-gallery-grid" ngxImageGallery [ngxImageGallery]="options">
         @for (photo of photos; track photo.fullSrc) {
-          <a class="photo-tile" [href]="photo.fullSrc" [ngxImageGalleryItem]="photo">
+          <a class="css-gallery-tile" [href]="photo.fullSrc" [ngxImageGalleryItem]="photo">
             <img [src]="photo.thumbSrc" [alt]="photo.alt" loading="lazy" />
           </a>
         }
       </div>
     </section>
+  `,
+  styles: `
+    .css-gallery-demo {
+      display: block;
+    }
+
+    .css-gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+
+    .css-gallery-tile {
+      position: relative;
+      display: block;
+      min-height: 180px;
+      overflow: hidden;
+      border: 1px solid color-mix(in srgb, #111827 10%, transparent);
+      border-radius: 8px;
+      background: #e6e8ec;
+      text-decoration: none;
+      aspect-ratio: 4 / 3;
+    }
+
+    .css-gallery-tile:nth-child(4) {
+      aspect-ratio: 3 / 4;
+      grid-row: span 2;
+    }
+
+    .css-gallery-tile img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition:
+        transform 180ms ease,
+        filter 180ms ease;
+    }
+
+    .css-gallery-tile:focus-visible {
+      outline: 3px solid #2563eb;
+      outline-offset: 3px;
+    }
+
+    .css-gallery-tile:hover img {
+      transform: scale(1.035);
+      filter: saturate(1.04);
+    }
+
+    @media (max-width: 560px) {
+      .css-gallery-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
   `,
 })
 export class CssPropertiesGalleryExample {

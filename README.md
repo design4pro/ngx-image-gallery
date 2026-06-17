@@ -5,7 +5,7 @@ This workspace contains the `ngx-image-gallery` Angular library and a demo appli
 ## Projects
 
 - `projects/ngx-image-gallery`: directive-only Angular image gallery library.
-- `projects/demo`: consumer demo with CSS custom properties and Tailwind 4 examples.
+- `projects/demo`: GitHub Pages docsite with Spartan UI, Tailwind 4, docs, and gallery examples.
 
 ## Development Server
 
@@ -14,6 +14,14 @@ npx ng serve demo
 ```
 
 Open `http://localhost:4200/`.
+
+Main routes:
+
+- `/`: landing page with a live gallery preview.
+- `/examples/custom-properties`: pure CSS and custom properties gallery demo.
+- `/examples/tailwind`: Tailwind 4 gallery demo.
+- `/examples/route-sync`: URL-controlled lightbox demo.
+- `/docs/installation`, `/docs/usage`, `/docs/options`, `/docs/styling`, `/docs/custom-lightbox`, `/docs/route-sync`: documentation routes.
 
 ## Build
 
@@ -27,6 +35,13 @@ Build the demo:
 
 ```bash
 npx ng build demo --configuration development
+```
+
+Build the GitHub Pages artifact:
+
+```bash
+npx ng build demo --configuration production --base-href /ngx-image-gallery/
+cp dist/demo/browser/index.html dist/demo/browser/404.html
 ```
 
 ## Tests

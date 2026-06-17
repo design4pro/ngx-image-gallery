@@ -15,12 +15,7 @@ import { DEMO_PHOTOS } from './demo-photos';
     NgxImageGalleryLightboxDirective,
   ],
   template: `
-    <section class="example-section">
-      <div class="example-heading">
-        <h2>Tailwind 4</h2>
-        <p>Custom lightbox template, utility classes, and directive registration.</p>
-      </div>
-
+    <section aria-label="Tailwind gallery demo">
       <div
         ngxImageGallery
         [ngxImageGallery]="options"

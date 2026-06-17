@@ -10,6 +10,7 @@ Native Angular image gallery with a PhotoSwipe-like lightbox experience, progres
 - Optional configured classes for generated lightbox elements.
 - Optional custom lightbox template with state and command context.
 - Optional lightbox thumbnail strip.
+- Optional URL-controlled lightbox state through the `ngx-image-gallery/router` secondary entrypoint.
 - Smooth opening animation from the clicked thumbnail.
 - No required original image dimensions.
 - Provisional sizing from the thumbnail, followed by recalculation from `naturalWidth` and `naturalHeight` after the original image loads.
@@ -182,6 +183,40 @@ interface NgxImageGalleryLightboxContext {
   goTo(index: number): void;
 }
 ```
+
+## Route sync
+
+Import `NgxImageGalleryRouteSyncDirective` from `ngx-image-gallery/router` when a gallery should be addressable by URL. The primary entrypoint does not require Angular Router.
+
+```ts
+import { NgxImageGalleryRouteSyncDirective } from 'ngx-image-gallery/router';
+```
+
+```html
+<div
+  ngxImageGallery
+  [ngxImageGalleryRouteSync]="{
+    queryParam: 'image',
+    id: imageId,
+    slideNavigation: 'push',
+  }"
+>
+  <a
+    *ngFor="let photo of photos; index as index"
+    [href]="photo.fullSrc"
+    [ngxImageGalleryItem]="photo"
+  >
+    <img [src]="photo.thumbSrc" [alt]="photo.alt" />
+  </a>
+</div>
+```
+
+```ts
+readonly imageId = (item: NgxImageGalleryItem, index: number): string =>
+  item.id ?? String(index);
+```
+
+Route sync uses `?image=...` by default. Opening a route-selected slide opens the lightbox, changing slides updates the query param, closing the lightbox removes it, and Back or Forward follows the URL state.
 
 ## Item API
 
