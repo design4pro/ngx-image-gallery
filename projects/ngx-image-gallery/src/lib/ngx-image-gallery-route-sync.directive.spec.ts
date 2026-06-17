@@ -1,11 +1,12 @@
-import { Component } from '@angular/core';
+import { Component, ViewChild } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router, RouterOutlet } from '@angular/router';
+import { By } from '@angular/platform-browser';
+import { NgxImageGalleryRouteSyncDirective } from 'ngx-image-gallery/router';
 import type { NgxImageGalleryItem } from './gallery-types';
 import { NgxImageGalleryDirective } from './ngx-image-gallery.directive';
 import { NgxImageGalleryItemDirective } from './ngx-image-gallery-item.directive';
 import { NgxImageGalleryService } from './ngx-image-gallery.service';
-import { NgxImageGalleryRouteSyncDirective } from '../../router/src/ngx-image-gallery-route-sync.directive';
 
 @Component({
   imports: [RouterOutlet],
@@ -25,6 +26,7 @@ class RoutedRouteSyncHostComponent {}
       [ngxImageGalleryRouteSync]="{
         queryParam: 'image',
         id: imageId,
+        slideNavigation: 'push',
       }"
     >
       @for (item of items; track item.id) {
@@ -44,6 +46,41 @@ class RouteSyncGalleryComponent {
   readonly imageId = (item: NgxImageGalleryItem, index: number): string => item.id ?? String(index);
 }
 
+@Component({
+  imports: [NgxImageGalleryDirective, NgxImageGalleryRouteSyncDirective],
+  template: `
+    <div
+      ngxImageGallery
+      [ngxImageGalleryRouteSync]="{
+        queryParam: 'image',
+        id: imageId,
+      }"
+    ></div>
+  `,
+})
+class AsyncRouteSyncGalleryComponent {
+  @ViewChild(NgxImageGalleryDirective, { static: true })
+  private readonly gallery!: NgxImageGalleryDirective;
+
+  readonly imageId = (item: NgxImageGalleryItem, index: number): string => item.id ?? String(index);
+
+  loadItems(): void {
+    this.gallery.register(createGalleryItemDirective('first'));
+    this.gallery.register(createGalleryItemDirective('second'));
+  }
+}
+
+function createGalleryItemDirective(id: string): NgxImageGalleryItemDirective {
+  const originElement = document.createElement('a');
+  return {
+    originElement,
+    galleryItem: {
+      id,
+      fullSrc: `async-route-sync-full-${id}.jpg`,
+    },
+  } as unknown as NgxImageGalleryItemDirective;
+}
+
 describe('NgxImageGalleryRouteSyncDirective', () => {
   let fixture: ComponentFixture<RoutedRouteSyncHostComponent>;
   let router: Router;
@@ -60,7 +97,12 @@ describe('NgxImageGalleryRouteSyncDirective', () => {
 
     await TestBed.configureTestingModule({
       imports: [RoutedRouteSyncHostComponent],
-      providers: [provideRouter([{ path: 'sync', component: RouteSyncGalleryComponent }])],
+      providers: [
+        provideRouter([
+          { path: 'sync', component: RouteSyncGalleryComponent },
+          { path: 'async', component: AsyncRouteSyncGalleryComponent },
+        ]),
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(RoutedRouteSyncHostComponent);
@@ -106,11 +148,39 @@ describe('NgxImageGalleryRouteSyncDirective', () => {
   });
 
   it('removes a missing image id from the route', async () => {
+    const navigateSpy = vi.spyOn(router, 'navigate');
+
     await navigateTo('/sync?image=missing');
     await fixture.whenStable();
 
     expect(service.isOpen()).toBe(false);
     expect(router.url).toBe('/sync');
+    expect(navigateSpy).toHaveBeenCalledWith(
+      [],
+      expect.objectContaining({
+        replaceUrl: true,
+      }),
+    );
+  });
+
+  it('opens a deep-linked image after async items register', async () => {
+    await navigateTo('/async?image=second');
+
+    expect(service.isOpen()).toBe(false);
+    expect(router.url).toBe('/async?image=second');
+
+    const gallery = fixture.debugElement.query(By.directive(AsyncRouteSyncGalleryComponent))
+      .componentInstance as AsyncRouteSyncGalleryComponent;
+
+    gallery.loadItems();
+    await Promise.resolve();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(service.isOpen()).toBe(true);
+    expect(service.activeIndex()).toBe(1);
+    expect(service.activeItem()?.id).toBe('second');
+    expect(router.url).toBe('/async?image=second');
   });
 
   async function navigateTo(url: string): Promise<void> {

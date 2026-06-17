@@ -42,7 +42,7 @@ let sourceCounter = 0;
 
 /**
  * This function dynamically adds and removes classes for a given element without requiring
- * the a class binding (e.g. `[class]="..."`) which may interfere with other class bindings.
+ * a class binding (e.g. `[class]="..."`) which may interfere with other class bindings.
  *
  * 1. This will merge the existing classes on the element with the new classes.
  * 2. It will also remove any classes that were previously added by this function but are no longer present in the new classes.

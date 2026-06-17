@@ -64,6 +64,7 @@ export class NgxImageGalleryRouteSyncDirective implements AfterContentInit {
         return;
       }
 
+      this.gallery.itemsVersion();
       const routeValue = this.queryParamMap().get(this.options().queryParam);
       this.applyRouteValue(routeValue, this.options());
     });
@@ -90,13 +91,18 @@ export class NgxImageGalleryRouteSyncDirective implements AfterContentInit {
       return;
     }
 
-    const index = this.findIndexByRouteValue(routeValue, options);
+    const items = this.gallery.getItems();
+    const index = this.findIndexByRouteValue(items, routeValue, options);
     if (index < 0) {
+      if (items.length === 0) {
+        return;
+      }
+
       if (options.closeOnMissingItem && this.gallery.ownsActiveLightbox()) {
         this.gallery.close();
       }
       if (options.closeOnMissingItem) {
-        this.updateRouteParam(null, options);
+        this.updateRouteParam(null, options, true);
       }
       return;
     }
@@ -132,10 +138,12 @@ export class NgxImageGalleryRouteSyncDirective implements AfterContentInit {
     }
   }
 
-  private findIndexByRouteValue(routeValue: string, options: NormalizedRouteSyncOptions): number {
-    return this.gallery
-      .getItems()
-      .findIndex((item, index) => options.id(item, index) === routeValue);
+  private findIndexByRouteValue(
+    items: readonly NgxImageGalleryItem[],
+    routeValue: string,
+    options: NormalizedRouteSyncOptions,
+  ): number {
+    return items.findIndex((item, index) => options.id(item, index) === routeValue);
   }
 
   private getRouteValue(index: number, options: NormalizedRouteSyncOptions): string | null {
@@ -143,7 +151,11 @@ export class NgxImageGalleryRouteSyncDirective implements AfterContentInit {
     return item ? options.id(item, index) : null;
   }
 
-  private updateRouteParam(value: string | null, options: NormalizedRouteSyncOptions): void {
+  private updateRouteParam(
+    value: string | null,
+    options: NormalizedRouteSyncOptions,
+    replaceUrl = options.slideNavigation !== 'push',
+  ): void {
     const current = this.route.snapshot.queryParamMap.get(options.queryParam);
     if (current === value) {
       return;
@@ -155,7 +167,7 @@ export class NgxImageGalleryRouteSyncDirective implements AfterContentInit {
         [options.queryParam]: value,
       },
       queryParamsHandling: 'merge',
-      replaceUrl: options.slideNavigation !== 'push',
+      replaceUrl,
     });
   }
 }
