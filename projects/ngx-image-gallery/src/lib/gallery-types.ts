@@ -55,7 +55,6 @@ export interface NgxImageGalleryClasses {
 }
 
 export interface NgxImageGalleryOptions {
-  loadOriginal: 'after-open';
   provisionalLongEdge: number;
   loop: boolean;
   closeOnEsc: boolean;
@@ -119,7 +118,6 @@ export const DEFAULT_NGX_IMAGE_GALLERY_LABELS: NgxImageGalleryLabels = {
 };
 
 export const DEFAULT_NGX_IMAGE_GALLERY_OPTIONS: NgxImageGalleryOptions = {
-  loadOriginal: 'after-open',
   provisionalLongEdge: 1600,
   loop: true,
   closeOnEsc: true,
@@ -151,7 +149,6 @@ export function provideNgxImageGallery(options: NgxImageGalleryOptionsInput = {}
         ...DEFAULT_NGX_IMAGE_GALLERY_LABELS,
         ...options.labels,
       },
-      loadOriginal: 'after-open',
     } satisfies NgxImageGalleryOptions,
   };
 }

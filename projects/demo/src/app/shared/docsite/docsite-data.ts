@@ -67,12 +67,6 @@ export const optionGroups: Array<{ title: string; options: ApiOption[] }> = [
     title: 'Gallery options',
     options: [
       {
-        name: 'loadOriginal',
-        type: "'after-open'",
-        defaultValue: "'after-open'",
-        description: 'Loads the original image after the opening animation starts.',
-      },
-      {
         name: 'provisionalLongEdge',
         type: 'number',
         defaultValue: '1600',
@@ -129,13 +123,13 @@ export const optionGroups: Array<{ title: string; options: ApiOption[] }> = [
         name: 'fullSrc',
         type: 'string',
         defaultValue: 'required',
-        description: 'Original image URL used inside the lightbox.',
+        description: 'Application-owned original image URL used inside the lightbox.',
       },
       {
         name: 'thumbSrc',
         type: 'string',
         defaultValue: 'fullSrc',
-        description: 'Thumbnail URL used in previews and thumbnail controls.',
+        description: 'Application-owned thumbnail URL used in previews and thumbnail controls.',
       },
       {
         name: 'alt',
@@ -147,7 +141,8 @@ export const optionGroups: Array<{ title: string; options: ApiOption[] }> = [
         name: 'srcset',
         type: 'string',
         defaultValue: 'undefined',
-        description: 'Responsive source set for the loaded full-size image.',
+        description:
+          'Responsive source set for the loaded full-size image. Unsafe lists are ignored.',
       },
       {
         name: 'sizes',
@@ -261,7 +256,7 @@ export const docs: DocPage[] = [
     sections: [
       {
         title: 'Install the package',
-        body: 'The runtime package only peers Angular. Tailwind, Spartan, and app design systems stay outside the library.',
+        body: 'The runtime package is Angular-only and has no dependency on third-party UI frameworks. Tailwind, Spartan, and app design systems stay outside the library.',
         code: {
           language: 'bash',
           code: 'npm install ngx-image-gallery',
@@ -311,7 +306,7 @@ export const appConfig: ApplicationConfig = {
       },
       {
         title: 'Item data',
-        body: 'Only fullSrc is required. Dimensions, srcset, and route ids can be added when your app has them.',
+        body: 'Only fullSrc is required. Dimensions, srcset, and stable ids can be added when your app has them.',
         code: {
           language: 'ts',
           code: `import type { NgxImageGalleryItem } from 'ngx-image-gallery';
@@ -325,6 +320,10 @@ export const photos: NgxImageGalleryItem[] = [
   },
 ];`,
         },
+      },
+      {
+        title: 'Image URL boundary',
+        body: 'Gallery image URLs are application-owned data. The library assigns only relative URLs, HTTP(S) URLs, blob URLs, and common raster data:image URLs for single image sources; unsafe schemes are ignored. Use relative, HTTP(S), or blob candidates in srcset because an unsafe candidate drops the whole srcset value.',
       },
     ],
   },
@@ -406,7 +405,7 @@ export const photos: NgxImageGalleryItem[] = [
     sections: [
       {
         title: 'Default lightbox',
-        body: 'The generated lightbox uses a modal dialog, moves focus inside on open, traps focus while open, restores connected opener focus on close, hides inactive slides from assistive technology, and announces loading or error states.',
+        body: 'The generated lightbox uses a modal dialog, moves focus inside on open, traps focus in lightbox controls, marks existing body siblings inert and aria-hidden, locks body scrolling, restores connected opener focus on close, hides inactive slides from assistive technology, and announces loading or error states.',
       },
       {
         title: 'Keyboard support',
@@ -433,6 +432,10 @@ export const photos: NgxImageGalleryItem[] = [
       {
         title: 'Custom templates',
         body: 'When a custom lightbox template replaces default controls, the app owns those controls semantics. Prefer native buttons, label icon-only controls, expose changing counters with aria-live, and keep item alt text meaningful.',
+      },
+      {
+        title: 'Color contrast',
+        body: 'Automated jsdom accessibility smoke tests do not measure rendered contrast. Verify contrast in a browser when changing default colors or theme tokens.',
       },
     ],
   },

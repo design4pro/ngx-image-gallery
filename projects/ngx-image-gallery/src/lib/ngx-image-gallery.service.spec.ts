@@ -5,6 +5,7 @@ import { provideNgxImageGallery } from './gallery-types';
 
 class FakeImage {
   static requests: string[] = [];
+  static srcsets: string[] = [];
   static naturalWidthValue = 2400;
   static naturalHeightValue = 1200;
   static shouldError = false;
@@ -17,9 +18,9 @@ class FakeImage {
   height = FakeImage.naturalHeightValue;
   currentSrc = '';
   sizes = '';
-  srcset = '';
 
   private source = '';
+  private sourceSet = '';
 
   get src(): string {
     return this.source;
@@ -38,6 +39,15 @@ class FakeImage {
       this.onload?.();
     }, 0);
   }
+
+  get srcset(): string {
+    return this.sourceSet;
+  }
+
+  set srcset(value: string) {
+    this.sourceSet = value;
+    FakeImage.srcsets.push(value);
+  }
 }
 
 describe('NgxImageGalleryService', () => {
@@ -47,6 +57,7 @@ describe('NgxImageGalleryService', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     FakeImage.requests = [];
+    FakeImage.srcsets = [];
     FakeImage.naturalWidthValue = 2400;
     FakeImage.naturalHeightValue = 1200;
     FakeImage.shouldError = false;
@@ -273,6 +284,36 @@ describe('NgxImageGalleryService', () => {
     });
   });
 
+  it('defaults invalid open indexes to the first slide', () => {
+    service.open(
+      [
+        { fullSrc: 'full-1.jpg', thumbSrc: 'thumb-1.jpg' },
+        { fullSrc: 'full-2.jpg', thumbSrc: 'thumb-2.jpg' },
+      ],
+      Number.NaN,
+    );
+
+    expect(service.activeIndex()).toBe(0);
+    expect(service.activeItem()?.fullSrc).toBe('full-1.jpg');
+  });
+
+  it('ignores invalid goTo indexes', () => {
+    service.open(
+      [
+        { fullSrc: 'full-1.jpg', thumbSrc: 'thumb-1.jpg' },
+        { fullSrc: 'full-2.jpg', thumbSrc: 'thumb-2.jpg' },
+      ],
+      0,
+    );
+    vi.advanceTimersByTime(333);
+
+    service.goTo(Number.NaN);
+    service.goTo(Number.POSITIVE_INFINITY);
+
+    expect(service.activeIndex()).toBe(0);
+    expect(service.activeItem()?.fullSrc).toBe('full-1.jpg');
+  });
+
   it('removes a closing overlay before opening another gallery', () => {
     service.open([{ fullSrc: 'old-full.jpg', thumbSrc: 'old-thumb.jpg' }], 0);
     vi.advanceTimersByTime(333);
@@ -337,6 +378,46 @@ describe('NgxImageGalleryService', () => {
     ).toBe('Open photo 2 of 2: Second image');
   });
 
+  it('does not assign unsafe image source schemes to generated images or the loader', () => {
+    service.open(
+      [
+        {
+          fullSrc: 'javascript:alert(1)',
+          thumbSrc: 'data:text/html,<script>alert(1)</script>',
+        },
+      ],
+      0,
+      { showThumbnails: true },
+    );
+
+    expect(getRenderedImageSources()).toEqual(['']);
+
+    vi.advanceTimersByTime(333);
+
+    expect(FakeImage.requests).toEqual([]);
+    expect(document.querySelector('.ngx-image-gallery-error')?.getAttribute('aria-hidden')).toBe(
+      'false',
+    );
+  });
+
+  it('drops unsafe srcset candidates before loading the full image', () => {
+    service.open(
+      [
+        {
+          fullSrc: 'full-1.jpg',
+          thumbSrc: 'thumb-1.jpg',
+          srcset: 'full-1.jpg 1x, javascript:alert(1) 2x',
+        },
+      ],
+      0,
+    );
+
+    vi.advanceTimersByTime(333);
+
+    expect(FakeImage.requests).toEqual(['full-1.jpg']);
+    expect(FakeImage.srcsets).toEqual([]);
+  });
+
   it('moves focus into the dialog, traps it, and restores connected origin focus', () => {
     const opener = document.createElement('button');
     opener.type = 'button';
@@ -366,6 +447,25 @@ describe('NgxImageGalleryService', () => {
     service.close(false);
 
     expect(document.activeElement).toBe(opener);
+  });
+
+  it('marks body siblings inert while the dialog is open and restores them on close', () => {
+    const page = document.createElement('main');
+    page.setAttribute('aria-hidden', 'false');
+    document.body.appendChild(page);
+    document.body.style.overflow = 'auto';
+
+    service.open([{ fullSrc: 'full-1.jpg', thumbSrc: 'thumb-1.jpg' }], 0);
+
+    expect(document.body.style.overflow).toBe('hidden');
+    expect(page.hasAttribute('inert')).toBe(true);
+    expect(page.getAttribute('aria-hidden')).toBe('true');
+
+    service.close(false);
+
+    expect(document.body.style.overflow).toBe('auto');
+    expect(page.hasAttribute('inert')).toBe(false);
+    expect(page.getAttribute('aria-hidden')).toBe('false');
   });
 
   it('does not restore focus to a disconnected origin element', () => {

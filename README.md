@@ -66,4 +66,15 @@ npx prettier --check .
 
 ## Design Notes
 
-Read `DESIGN.md` before changing library architecture or public API. The library intentionally stays independent of UI frameworks. Tailwind is used only by the demo as a consumer styling example.
+Read `DESIGN.md` before changing library architecture or public API. The library intentionally avoids third-party UI framework dependencies. Tailwind is used only by the demo as a consumer styling example.
+
+## Package Artifact
+
+Build the Angular package before packing or publishing:
+
+```bash
+npx ng build ngx-image-gallery
+npm pack ./dist/ngx-image-gallery --dry-run
+```
+
+Do not pack `projects/ngx-image-gallery` directly; that is the source package, not the built Angular Package Format artifact.

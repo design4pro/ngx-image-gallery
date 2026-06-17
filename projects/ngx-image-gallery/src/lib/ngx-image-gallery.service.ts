@@ -97,6 +97,12 @@ interface PointerGesture {
   startCenter: GalleryPoint;
 }
 
+interface ModalSiblingState {
+  element: HTMLElement;
+  hadInert: boolean;
+  ariaHidden: string | null;
+}
+
 interface GalleryRuntime {
   items: NgxImageGalleryItem[];
   options: NgxImageGalleryOptions;
@@ -123,6 +129,9 @@ const SWIPE_THRESHOLD_PX = 60;
 const VIEWPORT_PADDING_PX = 32;
 const ORIGIN_RATIO_TOLERANCE = 0.01;
 const WHEEL_ZOOM_FACTOR = 1.25;
+const SAFE_IMAGE_SOURCE_PROTOCOLS = new Set(['http:', 'https:', 'blob:']);
+const SAFE_DATA_IMAGE_SOURCE_PATTERN = /^data:image\/(?:avif|bmp|gif|jpe?g|png|webp)(?:[;,])/i;
+const UNSAFE_IMAGE_SOURCE_CHARACTER_PATTERN = /[\u0000-\u001f\u007f]/;
 
 interface OriginCrop {
   objectPosition: string;
@@ -164,7 +173,7 @@ export class NgxImageGalleryService {
 
       const galleryItems = items.map((item) => ({ ...item }));
       const mergedOptions = this.mergeOptions(options);
-      const activeIndex = clamp(Math.trunc(index), 0, galleryItems.length - 1);
+      const activeIndex = this.normalizeOpenIndex(index, galleryItems.length);
       const originElements = options.originElements ?? [];
       const slides = galleryItems.map((item, slideIndex) =>
         this.createSlideRuntime(
@@ -200,6 +209,7 @@ export class NgxImageGalleryService {
 
       this.runtime = runtime;
       this.document.body.appendChild(elements.overlay);
+      this.applyModalPageState(runtime);
       this.bindOverlayEvents(runtime);
       this.renderVisibleSlides(runtime);
       this.updateState(runtime);
@@ -266,7 +276,12 @@ export class NgxImageGalleryService {
       return;
     }
 
-    const normalized = this.normalizeIndex(runtime, Math.trunc(index));
+    const requestedIndex = this.toFiniteInteger(index);
+    if (requestedIndex === null) {
+      return;
+    }
+
+    const normalized = this.normalizeIndex(runtime, requestedIndex);
     if (normalized === null || normalized === runtime.activeIndex) {
       return;
     }
@@ -299,7 +314,6 @@ export class NgxImageGalleryService {
         ...this.defaultOptions.labels,
         ...options.labels,
       },
-      loadOriginal: 'after-open',
     };
   }
 
@@ -317,7 +331,7 @@ export class NgxImageGalleryService {
       index,
       originElement,
       dimensions,
-      thumbSrc: getImageSource(item, originElement),
+      thumbSrc: this.resolveSafeImageSource(getImageSource(item, originElement)) ?? '',
       fitted,
       zoomBounds: calculateZoomBounds(dimensions, fitted),
       zoomScale: 1,
@@ -340,6 +354,44 @@ export class NgxImageGalleryService {
     style.id = GALLERY_STYLE_ID;
     style.textContent = GALLERY_STYLES;
     this.document.head.appendChild(style);
+  }
+
+  private applyModalPageState(runtime: GalleryRuntime): void {
+    const body = this.document.body;
+    const previousBodyOverflow = body.style.overflow;
+    const siblingStates: ModalSiblingState[] = Array.from(body.children)
+      .filter(
+        (element): element is HTMLElement =>
+          element instanceof HTMLElement && element !== runtime.elements.overlay,
+      )
+      .map((element) => ({
+        element,
+        hadInert: element.hasAttribute('inert'),
+        ariaHidden: element.getAttribute('aria-hidden'),
+      }));
+
+    body.style.overflow = 'hidden';
+    siblingStates.forEach(({ element }) => {
+      element.setAttribute('inert', '');
+      element.setAttribute('aria-hidden', 'true');
+    });
+
+    runtime.cleanup.push(() => {
+      body.style.overflow = previousBodyOverflow;
+      siblingStates.forEach(({ element, hadInert, ariaHidden }) => {
+        if (hadInert) {
+          element.setAttribute('inert', '');
+        } else {
+          element.removeAttribute('inert');
+        }
+
+        if (ariaHidden === null) {
+          element.removeAttribute('aria-hidden');
+        } else {
+          element.setAttribute('aria-hidden', ariaHidden);
+        }
+      });
+    });
   }
 
   private createOverlayElements(options: NgxImageGalleryOptions): OverlayElements {
@@ -681,7 +733,9 @@ export class NgxImageGalleryService {
     thumbImage.className = 'ngx-image-gallery-image ngx-image-gallery-thumb';
     thumbImage.alt = slide.item.alt ?? '';
     thumbImage.draggable = false;
-    thumbImage.src = slide.thumbSrc;
+    if (slide.thumbSrc) {
+      thumbImage.src = slide.thumbSrc;
+    }
 
     media.appendChild(thumbImage);
 
@@ -724,9 +778,15 @@ export class NgxImageGalleryService {
       image.sizes = slide.item.sizes;
     }
     if (slide.item.srcset) {
-      image.srcset = slide.item.srcset;
+      const safeSrcset = this.resolveSafeImageSrcset(slide.item.srcset);
+      if (safeSrcset) {
+        image.srcset = safeSrcset;
+      }
     }
-    image.src = slide.fullSrc ?? slide.item.fullSrc;
+    const safeSrc = this.resolveSafeImageSource(slide.fullSrc ?? slide.item.fullSrc);
+    if (safeSrc) {
+      image.src = safeSrc;
+    }
     return image;
   }
 
@@ -922,11 +982,23 @@ export class NgxImageGalleryService {
       return;
     }
 
+    const safeFullSrc = this.resolveSafeImageSource(slide.item.fullSrc);
+    if (!safeFullSrc) {
+      slide.fullError = true;
+      this.updateUi(runtime);
+      return;
+    }
+
     slide.fullLoading = true;
     this.updateUi(runtime);
 
+    const safeSrcset = this.resolveSafeImageSrcset(slide.item.srcset);
     this.imageLoader
-      .load(slide.item)
+      .load({
+        ...slide.item,
+        fullSrc: safeFullSrc,
+        srcset: safeSrcset,
+      })
       .then((loaded) => {
         if (this.runtime !== runtime) {
           return;
@@ -1516,7 +1588,10 @@ export class NgxImageGalleryService {
     image.className = 'ngx-image-gallery-thumbnail-image';
     image.alt = '';
     image.draggable = false;
-    image.src = item.thumbSrc ?? item.fullSrc;
+    const safeSrc = this.resolveSafeImageSource(item.thumbSrc ?? item.fullSrc);
+    if (safeSrc) {
+      image.src = safeSrc;
+    }
     this.addClassNames(image, runtime.options.classes.thumbnailImage);
 
     button.appendChild(image);
@@ -1591,6 +1666,77 @@ export class NgxImageGalleryService {
     }
 
     return index;
+  }
+
+  private normalizeOpenIndex(index: number, itemCount: number): number {
+    const requestedIndex = this.toFiniteInteger(index);
+    return requestedIndex === null ? 0 : clamp(requestedIndex, 0, itemCount - 1);
+  }
+
+  private toFiniteInteger(index: number): number | null {
+    const requestedIndex = Math.trunc(index);
+    return Number.isFinite(requestedIndex) ? requestedIndex : null;
+  }
+
+  private resolveSafeImageSource(source: string | null | undefined): string | null {
+    const trimmedSource = source?.trim();
+    if (!trimmedSource) {
+      return null;
+    }
+
+    if (UNSAFE_IMAGE_SOURCE_CHARACTER_PATTERN.test(trimmedSource)) {
+      return null;
+    }
+
+    if (SAFE_DATA_IMAGE_SOURCE_PATTERN.test(trimmedSource)) {
+      return trimmedSource;
+    }
+
+    if (trimmedSource.toLowerCase().startsWith('data:')) {
+      return null;
+    }
+
+    if (this.isRelativeImageSource(trimmedSource)) {
+      return trimmedSource;
+    }
+
+    try {
+      const url = new URL(trimmedSource, this.document.baseURI);
+      return SAFE_IMAGE_SOURCE_PROTOCOLS.has(url.protocol) ? trimmedSource : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private resolveSafeImageSrcset(srcset: string | undefined): string | undefined {
+    if (!srcset?.trim()) {
+      return undefined;
+    }
+
+    const candidates = srcset
+      .split(',')
+      .map((candidate) => candidate.trim())
+      .filter(Boolean);
+    if (candidates.length === 0) {
+      return undefined;
+    }
+
+    const safeCandidates = candidates.map((candidate) => {
+      const [source, ...descriptors] = candidate.split(/\s+/);
+      if (!source || !this.resolveSafeImageSource(source)) {
+        return null;
+      }
+
+      return [source, ...descriptors].join(' ');
+    });
+
+    return safeCandidates.every((candidate) => candidate !== null)
+      ? safeCandidates.join(', ')
+      : undefined;
+  }
+
+  private isRelativeImageSource(source: string): boolean {
+    return !source.startsWith('//') && !/^[a-z][a-z0-9+.-]*:/i.test(source);
   }
 
   private getViewportSize(): GallerySize {
