@@ -24,9 +24,8 @@ import { classHooks, cssTokens, docs, optionGroups } from '../../shared/docsite/
         <nav class="sticky top-24 grid gap-1" aria-label="Documentation">
           @for (item of docsNav; track item.slug) {
             <a
-              class="rounded-md px-3 py-2 text-sm font-medium text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-950"
-              [class.bg-zinc-950]="item.slug === doc().slug"
-              [class.text-white]="item.slug === doc().slug"
+              [class]="docsNavLinkClass(item.slug === doc().slug)"
+              [attr.aria-current]="item.slug === doc().slug ? 'page' : null"
               [routerLink]="['/docs', item.slug]"
             >
               {{ item.title }}
@@ -49,9 +48,8 @@ import { classHooks, cssTokens, docs, optionGroups } from '../../shared/docsite/
         <div class="mb-8 flex gap-2 overflow-x-auto pb-2 lg:hidden" aria-label="Documentation">
           @for (item of docsNav; track item.slug) {
             <a
-              class="shrink-0 rounded-md border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700"
-              [class.bg-zinc-950]="item.slug === doc().slug"
-              [class.text-white]="item.slug === doc().slug"
+              [class]="docsMobileNavLinkClass(item.slug === doc().slug)"
+              [attr.aria-current]="item.slug === doc().slug ? 'page' : null"
               [routerLink]="['/docs', item.slug]"
             >
               {{ item.title }}
@@ -79,18 +77,21 @@ import { classHooks, cssTokens, docs, optionGroups } from '../../shared/docsite/
             <section class="grid gap-5 border-b border-border pb-8">
               <h2 class="text-2xl font-semibold tracking-tight text-zinc-950">API reference</h2>
               <p class="mt-2 max-w-2xl leading-7 text-zinc-600">
-                The public surface stays small and explicit. Route sync lives in a secondary
+                The public surface stays small and explicit. Router close lives in a secondary
                 entrypoint.
               </p>
 
-              <div hlmAccordion type="multiple" class="mt-6">
-                @for (group of optionGroups; track group.title) {
-                  <div hlmAccordionItem>
-                    <hlm-accordion-trigger>
+              <hlm-accordion
+                type="multiple"
+                class="mt-6 overflow-hidden rounded-md border border-border bg-background shadow-sm"
+              >
+                @for (group of optionGroups; track group.title; let first = $first) {
+                  <hlm-accordion-item [isOpened]="first" class="px-4 last:border-b-0">
+                    <hlm-accordion-trigger triggerClass="py-4 hover:no-underline">
                       <span>{{ group.title }}</span>
                     </hlm-accordion-trigger>
                     <hlm-accordion-content>
-                      <div class="grid gap-3 pb-2">
+                      <div class="grid gap-3 pb-4">
                         @for (option of group.options; track option.name) {
                           <div class="border-b border-border py-4 last:border-b-0">
                             <div class="flex flex-wrap items-center gap-2">
@@ -109,9 +110,9 @@ import { classHooks, cssTokens, docs, optionGroups } from '../../shared/docsite/
                         }
                       </div>
                     </hlm-accordion-content>
-                  </div>
+                  </hlm-accordion-item>
                 }
-              </div>
+              </hlm-accordion>
             </section>
           }
 
@@ -156,6 +157,21 @@ export class DocsPage {
   protected readonly optionGroups = optionGroups;
   protected readonly classHooks = classHooks;
   protected readonly cssTokens = cssTokens;
+
+  protected docsNavLinkClass(isActive: boolean): string {
+    const base = 'rounded-md px-3 py-2 text-sm font-medium transition';
+    return isActive
+      ? `${base} bg-zinc-950 text-white shadow-sm`
+      : `${base} text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950`;
+  }
+
+  protected docsMobileNavLinkClass(isActive: boolean): string {
+    const base = 'shrink-0 rounded-md border px-3 py-1.5 text-sm font-medium transition';
+    return isActive
+      ? `${base} border-zinc-950 bg-zinc-950 text-white shadow-sm`
+      : `${base} border-zinc-200 text-zinc-700 hover:bg-zinc-100 hover:text-zinc-950`;
+  }
+
   protected readonly doc = computed(() => {
     const slug = this.params().get('slug') ?? 'installation';
     return docs.find((item) => item.slug === slug) ?? docs[0];

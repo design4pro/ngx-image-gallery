@@ -18,6 +18,20 @@ export interface NgxImageGalleryItem {
   data?: unknown;
 }
 
+export interface NgxImageGalleryLabels {
+  dialog: string;
+  closeButton: string;
+  previousButton: string;
+  nextButton: string;
+  counter: (current: number, total: number) => string;
+  thumbnails: string;
+  thumbnailButton: (item: NgxImageGalleryItem, index: number, total: number) => string;
+  loading: string;
+  error: string;
+}
+
+export type NgxImageGalleryLabelsInput = Partial<NgxImageGalleryLabels>;
+
 export type NgxImageGalleryClassValue = string | readonly string[] | null | undefined;
 
 export interface NgxImageGalleryClasses {
@@ -49,9 +63,18 @@ export interface NgxImageGalleryOptions {
   showCounter: boolean;
   showThumbnails: boolean;
   classes: NgxImageGalleryClasses;
+  labels: NgxImageGalleryLabels;
 }
 
-export interface NgxImageGalleryOpenOptions extends Partial<NgxImageGalleryOptions> {
+export type NgxImageGalleryOptionsInput = Omit<
+  Partial<NgxImageGalleryOptions>,
+  'classes' | 'labels'
+> & {
+  classes?: NgxImageGalleryClasses;
+  labels?: NgxImageGalleryLabelsInput;
+};
+
+export interface NgxImageGalleryOpenOptions extends NgxImageGalleryOptionsInput {
   originElement?: HTMLElement;
   originElements?: readonly (HTMLElement | undefined)[];
   lightboxTemplate?: TemplateRef<NgxImageGalleryLightboxContext>;
@@ -82,6 +105,19 @@ export interface NgxImageGalleryLightboxContext {
   goTo: (index: number) => void;
 }
 
+export const DEFAULT_NGX_IMAGE_GALLERY_LABELS: NgxImageGalleryLabels = {
+  dialog: 'Image gallery',
+  closeButton: 'Close gallery',
+  previousButton: 'Previous image',
+  nextButton: 'Next image',
+  counter: (current, total) => `${current} / ${total}`,
+  thumbnails: 'Gallery thumbnails',
+  thumbnailButton: (item, index) =>
+    item.alt ? `Show image ${index + 1}: ${item.alt}` : `Show image ${index + 1}`,
+  loading: 'Loading image',
+  error: 'Image could not be loaded',
+};
+
 export const DEFAULT_NGX_IMAGE_GALLERY_OPTIONS: NgxImageGalleryOptions = {
   loadOriginal: 'after-open',
   provisionalLongEdge: 1600,
@@ -91,6 +127,7 @@ export const DEFAULT_NGX_IMAGE_GALLERY_OPTIONS: NgxImageGalleryOptions = {
   showCounter: true,
   showThumbnails: false,
   classes: {},
+  labels: DEFAULT_NGX_IMAGE_GALLERY_LABELS,
 };
 
 export const NGX_IMAGE_GALLERY_OPTIONS = new InjectionToken<NgxImageGalleryOptions>(
@@ -100,12 +137,20 @@ export const NGX_IMAGE_GALLERY_OPTIONS = new InjectionToken<NgxImageGalleryOptio
   },
 );
 
-export function provideNgxImageGallery(options: Partial<NgxImageGalleryOptions> = {}): Provider {
+export function provideNgxImageGallery(options: NgxImageGalleryOptionsInput = {}): Provider {
   return {
     provide: NGX_IMAGE_GALLERY_OPTIONS,
     useValue: {
       ...DEFAULT_NGX_IMAGE_GALLERY_OPTIONS,
       ...options,
+      classes: {
+        ...DEFAULT_NGX_IMAGE_GALLERY_OPTIONS.classes,
+        ...options.classes,
+      },
+      labels: {
+        ...DEFAULT_NGX_IMAGE_GALLERY_LABELS,
+        ...options.labels,
+      },
       loadOriginal: 'after-open',
     } satisfies NgxImageGalleryOptions,
   };

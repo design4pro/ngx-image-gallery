@@ -7,12 +7,12 @@ import { HlmSeparatorImports } from '@demo/ui/separator';
 import { HlmTypographyImports } from '@demo/ui/typography';
 import { map } from 'rxjs';
 import { CssPropertiesGalleryExample } from '../../examples/css-properties-gallery-example';
-import { RouteSyncGalleryExample } from '../../examples/route-sync-gallery-example';
+import { RouterCloseGalleryExample } from '../../examples/router-close-gallery-example';
 import { TailwindGalleryExample } from '../../examples/tailwind-gallery-example';
 import { CodeBlock } from '../../shared/code-block/code-block';
 import { exampleCards } from '../../shared/docsite/docsite-data';
 
-type ExampleSlug = 'custom-properties' | 'tailwind' | 'route-sync';
+type ExampleSlug = 'custom-properties' | 'tailwind' | 'router-close';
 
 const EXAMPLE_COPY: Record<
   ExampleSlug,
@@ -48,16 +48,15 @@ const EXAMPLE_COPY: Record<
   </ng-template>
 </div>`,
   },
-  'route-sync': {
-    eyebrow: 'Router entrypoint',
-    title: 'Route sync',
+  'router-close': {
+    eyebrow: 'Router close',
+    title: 'Close on navigation',
     description:
-      'Open a slide from `?image=...`, update the URL when slides change, and let Back or Forward restore the lightbox state.',
+      'Keep lightbox state local to the gallery, but close it when the application route changes or browser history moves.',
     language: 'ts',
-    snippet: `readonly routeSyncOptions = {
-  queryParam: 'image',
-  id: (item, index) => item.id ?? String(index),
-  slideNavigation: 'push',
+    snippet: `readonly closeOnNavigation = {
+  closeOnNavigation: true,
+  closeOnHistoryBack: true,
 };`,
   },
 };
@@ -68,7 +67,7 @@ const EXAMPLE_COPY: Record<
     RouterLink,
     CodeBlock,
     CssPropertiesGalleryExample,
-    RouteSyncGalleryExample,
+    RouterCloseGalleryExample,
     TailwindGalleryExample,
     HlmBadgeImports,
     HlmButtonImports,
@@ -93,13 +92,7 @@ const EXAMPLE_COPY: Record<
 
           <nav class="flex flex-wrap gap-2" aria-label="Example routes">
             @for (example of examples; track example.path) {
-              <a
-                hlmBtn
-                variant="outline"
-                size="sm"
-                [routerLink]="example.path.split('?')[0]"
-                [queryParams]="example.path.includes('?') ? { image: 'coast' } : null"
-              >
+              <a hlmBtn variant="outline" size="sm" [routerLink]="example.path">
                 {{ example.title }}
               </a>
             }
@@ -115,8 +108,8 @@ const EXAMPLE_COPY: Record<
             @case ('tailwind') {
               <app-tailwind-gallery-example />
             }
-            @case ('route-sync') {
-              <app-route-sync-gallery-example />
+            @case ('router-close') {
+              <app-router-close-gallery-example />
             }
             @default {
               <app-css-properties-gallery-example />
@@ -143,8 +136,7 @@ const EXAMPLE_COPY: Record<
         @for (example of examples; track example.path) {
           <a
             class="group overflow-hidden rounded-md border bg-background transition hover:-translate-y-0.5 hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950"
-            [routerLink]="example.path.split('?')[0]"
-            [queryParams]="example.path.includes('?') ? { image: 'coast' } : null"
+            [routerLink]="example.path"
           >
             <img
               class="aspect-[4/3] w-full object-cover"
@@ -171,7 +163,7 @@ export class ExamplesPage {
   protected readonly examples = exampleCards;
   protected readonly slug = computed<ExampleSlug>(() => {
     const slug = this.routeSlug();
-    return slug === 'tailwind' || slug === 'route-sync' ? slug : 'custom-properties';
+    return slug === 'tailwind' || slug === 'router-close' ? slug : 'custom-properties';
   });
   protected readonly copy = computed(() => EXAMPLE_COPY[this.slug()]);
 }

@@ -33,6 +33,7 @@ import {
   type NgxImageGalleryItem,
   type NgxImageGalleryLightboxContext,
   type NgxImageGalleryOpenOptions,
+  type NgxImageGalleryOptionsInput,
   type NgxImageGalleryOptions,
   type NgxImageGalleryState,
 } from './gallery-types';
@@ -208,7 +209,14 @@ export class NgxImageGalleryService {
 
   close(animate = true): void {
     const runtime = this.runtime;
-    if (!runtime || runtime.isClosing) {
+    if (!runtime) {
+      return;
+    }
+
+    if (runtime.isClosing) {
+      if (!animate) {
+        this.destroyRuntime(runtime);
+      }
       return;
     }
 
@@ -254,7 +262,7 @@ export class NgxImageGalleryService {
 
   goTo(index: number): void {
     const runtime = this.runtime;
-    if (!runtime) {
+    if (!runtime || runtime.isOpening || runtime.isClosing || runtime.isNavigating) {
       return;
     }
 
@@ -263,10 +271,20 @@ export class NgxImageGalleryService {
       return;
     }
 
-    this.navigateBy(normalized - runtime.activeIndex);
+    if (normalized === this.normalizeIndex(runtime, runtime.activeIndex + 1)) {
+      this.navigateBy(1);
+      return;
+    }
+
+    if (normalized === this.normalizeIndex(runtime, runtime.activeIndex - 1)) {
+      this.navigateBy(-1);
+      return;
+    }
+
+    this.activateIndex(runtime, normalized);
   }
 
-  private mergeOptions(options: Partial<NgxImageGalleryOptions>): NgxImageGalleryOptions {
+  private mergeOptions(options: NgxImageGalleryOptionsInput): NgxImageGalleryOptions {
     return {
       ...DEFAULT_NGX_IMAGE_GALLERY_OPTIONS,
       ...this.defaultOptions,
@@ -275,6 +293,11 @@ export class NgxImageGalleryService {
         ...DEFAULT_NGX_IMAGE_GALLERY_OPTIONS.classes,
         ...this.defaultOptions.classes,
         ...options.classes,
+      },
+      labels: {
+        ...DEFAULT_NGX_IMAGE_GALLERY_OPTIONS.labels,
+        ...this.defaultOptions.labels,
+        ...options.labels,
       },
       loadOriginal: 'after-open',
     };
@@ -324,6 +347,7 @@ export class NgxImageGalleryService {
     overlay.className = 'ngx-image-gallery-overlay';
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', options.labels.dialog);
     overlay.classList.toggle('ngx-image-gallery-has-thumbnails', options.showThumbnails);
     this.addClassNames(overlay, options.classes.overlay);
 
@@ -354,21 +378,21 @@ export class NgxImageGalleryService {
 
     const closeButton = this.createButton(
       'ngx-image-gallery-close',
-      'Close gallery',
+      options.labels.closeButton,
       '\u00d7',
       options.classes.button,
       options.classes.closeButton,
     );
     const prevButton = this.createButton(
       'ngx-image-gallery-prev',
-      'Previous image',
+      options.labels.previousButton,
       '\u2039',
       options.classes.button,
       options.classes.previousButton,
     );
     const nextButton = this.createButton(
       'ngx-image-gallery-next',
-      'Next image',
+      options.labels.nextButton,
       '\u203a',
       options.classes.button,
       options.classes.nextButton,
@@ -382,17 +406,21 @@ export class NgxImageGalleryService {
     const thumbnails = this.document.createElement('div');
     thumbnails.className = 'ngx-image-gallery-thumbnails';
     thumbnails.setAttribute('role', 'toolbar');
-    thumbnails.setAttribute('aria-label', 'Gallery thumbnails');
+    thumbnails.setAttribute('aria-label', options.labels.thumbnails);
     this.addClassNames(thumbnails, options.classes.thumbnails);
 
     const loading = this.document.createElement('div');
     loading.className = 'ngx-image-gallery-loading';
-    loading.textContent = 'Loading image';
+    loading.setAttribute('role', 'status');
+    loading.setAttribute('aria-hidden', 'true');
+    loading.textContent = options.labels.loading;
     this.addClassNames(loading, options.classes.loading);
 
     const error = this.document.createElement('div');
     error.className = 'ngx-image-gallery-error';
-    error.textContent = 'Image could not be loaded';
+    error.setAttribute('role', 'alert');
+    error.setAttribute('aria-hidden', 'true');
+    error.textContent = options.labels.error;
     this.addClassNames(error, options.classes.error);
 
     defaultUi.append(counter, closeButton, prevButton, nextButton);
@@ -631,6 +659,7 @@ export class NgxImageGalleryService {
     const index = this.normalizeIndex(runtime, runtime.activeIndex + position);
     const slideElement = this.document.createElement('div');
     slideElement.className = this.getSlideClassName(position);
+    slideElement.setAttribute('aria-hidden', 'true');
 
     if (index === null) {
       runtime.elements.track.appendChild(slideElement);
@@ -638,6 +667,13 @@ export class NgxImageGalleryService {
     }
 
     const slide = runtime.slides[index];
+    slideElement.setAttribute('role', 'group');
+    slideElement.setAttribute('aria-roledescription', 'slide');
+    if (position === 0) {
+      slideElement.removeAttribute('aria-hidden');
+      slideElement.setAttribute('aria-label', this.getSlideLabel(runtime, slide));
+    }
+
     const media = this.document.createElement('div');
     media.className = 'ngx-image-gallery-media';
 
@@ -729,7 +765,7 @@ export class NgxImageGalleryService {
 
     runtime.isOpening = false;
     runtime.openTimer = null;
-    runtime.elements.stage.focus({ preventScroll: true });
+    this.focusInitialElement(runtime);
     this.loadActiveFullImage(runtime);
   }
 
@@ -959,6 +995,15 @@ export class NgxImageGalleryService {
       return;
     }
 
+    if (event.key === 'Tab') {
+      this.trapFocus(event, runtime);
+      return;
+    }
+
+    if (this.isEditableEventTarget(event)) {
+      return;
+    }
+
     if (event.key === 'Escape' && runtime.options.closeOnEsc) {
       event.preventDefault();
       this.close();
@@ -977,9 +1022,27 @@ export class NgxImageGalleryService {
       return;
     }
 
-    if (event.key === 'Tab') {
-      this.trapFocus(event, runtime);
+    if (event.key === '+' || event.key === '=') {
+      event.preventDefault();
+      this.zoomByKeyboard(runtime, WHEEL_ZOOM_FACTOR);
+      return;
     }
+
+    if (event.key === '-') {
+      event.preventDefault();
+      this.zoomByKeyboard(runtime, 1 / WHEEL_ZOOM_FACTOR);
+      return;
+    }
+
+    if (event.key === '0') {
+      event.preventDefault();
+      this.resetZoomByKeyboard(runtime);
+    }
+  }
+
+  private focusInitialElement(runtime: GalleryRuntime): void {
+    const [firstFocusable] = this.getFocusableElements(runtime);
+    (firstFocusable ?? runtime.elements.stage).focus({ preventScroll: true });
   }
 
   private trapFocus(event: KeyboardEvent, runtime: GalleryRuntime): void {
@@ -1012,10 +1075,22 @@ export class NgxImageGalleryService {
       'select:not([disabled])',
       'textarea:not([disabled])',
       '[tabindex]:not([tabindex="-1"])',
+      '[contenteditable]:not([contenteditable="false"])',
     ].join(',');
 
     return Array.from(runtime.elements.ui.querySelectorAll<HTMLElement>(selectors)).filter(
       (element) => element.closest('[hidden], [aria-hidden="true"]') === null,
+    );
+  }
+
+  private isEditableEventTarget(event: KeyboardEvent): boolean {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return false;
+    }
+
+    return Boolean(
+      target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])'),
     );
   }
 
@@ -1186,7 +1261,9 @@ export class NgxImageGalleryService {
       return;
     }
 
-    runtime.elements.stage.releasePointerCapture?.(event.pointerId);
+    if (runtime.elements.stage.hasPointerCapture?.(event.pointerId)) {
+      runtime.elements.stage.releasePointerCapture(event.pointerId);
+    }
     const gesture = runtime.gesture;
     runtime.pointers.delete(event.pointerId);
 
@@ -1283,6 +1360,48 @@ export class NgxImageGalleryService {
     this.applyMediaLayout(activeSlide, runtime, mode);
   }
 
+  private zoomByKeyboard(runtime: GalleryRuntime, factor: number): void {
+    const activeSlide = this.getActiveSlide(runtime);
+    if (!activeSlide || runtime.isOpening || runtime.isClosing) {
+      return;
+    }
+
+    const targetScale = clamp(
+      activeSlide.zoomScale * factor,
+      activeSlide.zoomBounds.minScale,
+      activeSlide.zoomBounds.maxScale,
+    );
+    const center = this.getViewportCenter(runtime);
+    this.applyZoomAtPoint(
+      runtime,
+      activeSlide,
+      center,
+      center,
+      targetScale,
+      activeSlide.pan,
+      activeSlide.zoomScale,
+    );
+  }
+
+  private resetZoomByKeyboard(runtime: GalleryRuntime): void {
+    const activeSlide = this.getActiveSlide(runtime);
+    if (!activeSlide || runtime.isOpening || runtime.isClosing) {
+      return;
+    }
+
+    activeSlide.zoomScale = activeSlide.zoomBounds.minScale;
+    activeSlide.pan = { x: 0, y: 0 };
+    activeSlide.userZoomed = false;
+    this.applyMediaLayout(activeSlide, runtime);
+  }
+
+  private getViewportCenter(runtime: GalleryRuntime): GalleryPoint {
+    return {
+      x: runtime.viewport.width / 2,
+      y: runtime.viewport.height / 2,
+    };
+  }
+
   private preventNativePinch(event: TouchEvent): void {
     if (event.touches.length > 1) {
       event.preventDefault();
@@ -1310,14 +1429,18 @@ export class NgxImageGalleryService {
         return;
       }
 
-      runtime.activeIndex = nextIndex;
-      runtime.isNavigating = false;
-      runtime.pointers.clear();
-      runtime.gesture = null;
-      this.renderVisibleSlides(runtime);
-      this.updateState(runtime);
-      this.loadActiveFullImage(runtime);
+      this.activateIndex(runtime, nextIndex);
     }, NAVIGATION_DURATION_MS);
+  }
+
+  private activateIndex(runtime: GalleryRuntime, index: number): void {
+    runtime.activeIndex = index;
+    runtime.isNavigating = false;
+    runtime.pointers.clear();
+    runtime.gesture = null;
+    this.renderVisibleSlides(runtime);
+    this.updateState(runtime);
+    this.loadActiveFullImage(runtime);
   }
 
   private resetTrack(runtime: GalleryRuntime): void {
@@ -1328,21 +1451,22 @@ export class NgxImageGalleryService {
   private updateUi(runtime: GalleryRuntime): void {
     const activeSlide = this.getActiveSlide(runtime);
     runtime.elements.counter.hidden = !runtime.options.showCounter;
-    runtime.elements.counter.textContent = `${runtime.activeIndex + 1} / ${runtime.items.length}`;
+    runtime.elements.counter.textContent = runtime.options.labels.counter(
+      runtime.activeIndex + 1,
+      runtime.items.length,
+    );
 
     const canGoPrevious = this.normalizeIndex(runtime, runtime.activeIndex - 1) !== null;
     const canGoNext = this.normalizeIndex(runtime, runtime.activeIndex + 1) !== null;
     runtime.elements.prevButton.disabled = !canGoPrevious;
     runtime.elements.nextButton.disabled = !canGoNext;
 
-    runtime.elements.loading.classList.toggle(
-      'ngx-image-gallery-visible',
-      Boolean(activeSlide?.fullLoading),
-    );
-    runtime.elements.error.classList.toggle(
-      'ngx-image-gallery-visible',
-      Boolean(activeSlide?.fullError),
-    );
+    const isLoading = Boolean(activeSlide?.fullLoading);
+    const hasError = Boolean(activeSlide?.fullError);
+    runtime.elements.loading.classList.toggle('ngx-image-gallery-visible', isLoading);
+    runtime.elements.loading.setAttribute('aria-hidden', String(!isLoading));
+    runtime.elements.error.classList.toggle('ngx-image-gallery-visible', hasError);
+    runtime.elements.error.setAttribute('aria-hidden', String(!hasError));
     this.renderThumbnails(runtime);
     this.updateCustomLightbox(runtime);
   }
@@ -1382,7 +1506,10 @@ export class NgxImageGalleryService {
     const button = this.document.createElement('button');
     button.type = 'button';
     button.className = 'ngx-image-gallery-thumbnail';
-    button.setAttribute('aria-label', this.getThumbnailLabel(item, index));
+    button.setAttribute(
+      'aria-label',
+      runtime.options.labels.thumbnailButton(item, index, runtime.items.length),
+    );
     this.addClassNames(button, runtime.options.classes.thumbnailButton);
 
     const image = this.document.createElement('img');
@@ -1397,9 +1524,9 @@ export class NgxImageGalleryService {
     return button;
   }
 
-  private getThumbnailLabel(item: NgxImageGalleryItem, index: number): string {
-    const ordinal = index + 1;
-    return item.alt ? `Show image ${ordinal}: ${item.alt}` : `Show image ${ordinal}`;
+  private getSlideLabel(runtime: GalleryRuntime, slide: SlideRuntime): string {
+    const counter = runtime.options.labels.counter(slide.index + 1, runtime.items.length);
+    return slide.item.alt ? `${counter}: ${slide.item.alt}` : counter;
   }
 
   private updateState(runtime: GalleryRuntime): void {
@@ -1427,7 +1554,9 @@ export class NgxImageGalleryService {
     runtime.customLightbox?.viewRef.destroy();
     runtime.customLightbox = null;
     runtime.elements.overlay.remove();
-    runtime.previousFocus?.focus({ preventScroll: true });
+    if (runtime.previousFocus?.isConnected) {
+      runtime.previousFocus.focus({ preventScroll: true });
+    }
     this.runtime = null;
     this.zone.run(() => {
       this.stateSignal.set({

@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideChevronDown, lucideChevronUp } from '@ng-icons/lucide';
+import { lucideChevronDown } from '@ng-icons/lucide';
 import { BrnAccordionImports } from '@spartan-ng/brain/accordion';
 import { hlm } from '@demo/ui/utils';
 import type { ClassValue } from 'clsx';
@@ -8,7 +8,7 @@ import type { ClassValue } from 'clsx';
 @Component({
   selector: 'hlm-accordion-trigger',
   imports: [BrnAccordionImports, NgIcon],
-  providers: [provideIcons({ lucideChevronDown, lucideChevronUp })],
+  providers: [provideIcons({ lucideChevronDown })],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <h3 brnAccordionHeader class="flex">
@@ -17,15 +17,15 @@ import type { ClassValue } from 'clsx';
         <ng-icon
           name="lucideChevronDown"
           data-slot="accordion-trigger-icon"
-          class="pointer-events-none shrink-0 group-aria-expanded/accordion-trigger:hidden"
-        />
-        <ng-icon
-          name="lucideChevronUp"
-          data-slot="accordion-trigger-icon"
-          class="pointer-events-none shrink-0 group-aria-expanded/accordion-trigger:inline group-aria-[expanded=false]/accordion-trigger:hidden"
+          class="pointer-events-none shrink-0 transition-transform duration-200"
         />
       </button>
     </h3>
+  `,
+  styles: `
+    button[aria-expanded='true'] [data-slot='accordion-trigger-icon'] {
+      transform: rotate(180deg);
+    }
   `,
 })
 export class HlmAccordionTrigger {

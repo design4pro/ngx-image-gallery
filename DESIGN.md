@@ -126,9 +126,13 @@ This keeps the library directive-based while still allowing component-owned cust
 
 ## Accessibility
 
-The generated overlay uses `role="dialog"` and `aria-modal="true"`. The service traps focus inside default or custom controls, restores focus on close, supports escape close, and keeps keyboard navigation on arrow keys.
+The generated overlay uses `role="dialog"` and `aria-modal="true"`. The service moves focus inside the dialog, traps focus inside default or custom controls, restores focus to the opener when it is still connected, supports escape close, and keeps keyboard navigation on arrow keys.
 
-Custom templates should keep interactive elements as native `button`, `a`, `input`, `select`, or `textarea` elements when possible.
+Inactive slides are hidden from assistive technology. The active slide receives a slide role description and a label derived from the counter and item `alt` text. Loading and error states are announced only while active.
+
+Generated UI labels are configurable through the `labels` option. Label values are assigned as text content or ARIA attributes, never as HTML.
+
+Custom templates should keep interactive elements as native `button`, `a`, `input`, `select`, or `textarea` elements when possible. When custom templates replace default controls, the app owns names for icon-only controls, live regions for changing counters, and meaningful thumbnail button labels.
 
 ## Verification
 

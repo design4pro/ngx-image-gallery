@@ -20,8 +20,8 @@ Main routes:
 - `/`: landing page with a live gallery preview.
 - `/examples/custom-properties`: pure CSS and custom properties gallery demo.
 - `/examples/tailwind`: Tailwind 4 gallery demo.
-- `/examples/route-sync`: URL-controlled lightbox demo.
-- `/docs/installation`, `/docs/usage`, `/docs/options`, `/docs/styling`, `/docs/custom-lightbox`, `/docs/route-sync`: documentation routes.
+- `/examples/router-close`: router-close lightbox demo.
+- `/docs/installation`, `/docs/usage`, `/docs/options`, `/docs/styling`, `/docs/custom-lightbox`, `/docs/accessibility`, `/docs/router-close`: documentation routes.
 
 ## Build
 

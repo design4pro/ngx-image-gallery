@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import axe from 'axe-core';
 import { NgxImageGalleryService } from './ngx-image-gallery.service';
 import { provideNgxImageGallery } from './gallery-types';
 
@@ -6,6 +7,7 @@ class FakeImage {
   static requests: string[] = [];
   static naturalWidthValue = 2400;
   static naturalHeightValue = 1200;
+  static shouldError = false;
 
   onload: (() => void) | null = null;
   onerror: (() => void) | null = null;
@@ -27,7 +29,14 @@ class FakeImage {
     this.source = value;
     this.currentSrc = value;
     FakeImage.requests.push(value);
-    window.setTimeout(() => this.onload?.(), 0);
+    window.setTimeout(() => {
+      if (FakeImage.shouldError) {
+        this.onerror?.();
+        return;
+      }
+
+      this.onload?.();
+    }, 0);
   }
 }
 
@@ -40,6 +49,7 @@ describe('NgxImageGalleryService', () => {
     FakeImage.requests = [];
     FakeImage.naturalWidthValue = 2400;
     FakeImage.naturalHeightValue = 1200;
+    FakeImage.shouldError = false;
     originalAnimationFrame = window.requestAnimationFrame;
     window.requestAnimationFrame = (callback: FrameRequestCallback): number => {
       callback(0);
@@ -263,6 +273,115 @@ describe('NgxImageGalleryService', () => {
     });
   });
 
+  it('removes a closing overlay before opening another gallery', () => {
+    service.open([{ fullSrc: 'old-full.jpg', thumbSrc: 'old-thumb.jpg' }], 0);
+    vi.advanceTimersByTime(333);
+
+    service.close();
+    service.open([{ fullSrc: 'new-full.jpg', thumbSrc: 'new-thumb.jpg' }], 0);
+
+    expect(document.querySelectorAll('.ngx-image-gallery-overlay')).toHaveLength(1);
+    expect(getRenderedImageSources()).toContain('new-thumb.jpg');
+    expect(getRenderedImageSources()).not.toContain('old-thumb.jpg');
+
+    vi.advanceTimersByTime(333);
+
+    expect(document.querySelectorAll('.ngx-image-gallery-overlay')).toHaveLength(1);
+  });
+
+  it('gives the dialog an accessible name', () => {
+    service.open([{ fullSrc: 'full-1.jpg', thumbSrc: 'thumb-1.jpg' }], 0);
+
+    const overlay = document.querySelector('.ngx-image-gallery-overlay');
+
+    expect(overlay?.getAttribute('role')).toBe('dialog');
+    expect(overlay?.getAttribute('aria-modal')).toBe('true');
+    expect(overlay?.getAttribute('aria-label')).toBe('Image gallery');
+  });
+
+  it('uses configured labels without replacing unspecified defaults', () => {
+    service.open(
+      [
+        { fullSrc: 'full-1.jpg', thumbSrc: 'thumb-1.jpg', alt: 'First image' },
+        { fullSrc: 'full-2.jpg', thumbSrc: 'thumb-2.jpg', alt: 'Second image' },
+      ],
+      1,
+      {
+        showThumbnails: true,
+        labels: {
+          dialog: 'Photo gallery',
+          closeButton: 'Close photo gallery',
+          counter: (current, total) => `Photo ${current} of ${total}`,
+          thumbnailButton: (item, index, total) =>
+            `Open photo ${index + 1} of ${total}: ${item.alt}`,
+          loading: 'Loading photo',
+        },
+      },
+    );
+
+    expect(document.querySelector('.ngx-image-gallery-overlay')?.getAttribute('aria-label')).toBe(
+      'Photo gallery',
+    );
+    expect(document.querySelector('.ngx-image-gallery-close')?.getAttribute('aria-label')).toBe(
+      'Close photo gallery',
+    );
+    expect(document.querySelector('.ngx-image-gallery-next')?.getAttribute('aria-label')).toBe(
+      'Next image',
+    );
+    expect(document.querySelector('.ngx-image-gallery-counter')?.textContent).toBe('Photo 2 of 2');
+    expect(document.querySelector('.ngx-image-gallery-loading')?.textContent).toBe('Loading photo');
+    expect(
+      document
+        .querySelectorAll<HTMLButtonElement>('.ngx-image-gallery-thumbnail')[1]
+        ?.getAttribute('aria-label'),
+    ).toBe('Open photo 2 of 2: Second image');
+  });
+
+  it('moves focus into the dialog, traps it, and restores connected origin focus', () => {
+    const opener = document.createElement('button');
+    opener.type = 'button';
+    document.body.appendChild(opener);
+    opener.focus();
+
+    service.open(
+      [
+        { fullSrc: 'full-1.jpg', thumbSrc: 'thumb-1.jpg' },
+        { fullSrc: 'full-2.jpg', thumbSrc: 'thumb-2.jpg' },
+      ],
+      0,
+    );
+    vi.advanceTimersByTime(333);
+
+    const closeButton = document.querySelector<HTMLButtonElement>('.ngx-image-gallery-close');
+    const previousButton = document.querySelector<HTMLButtonElement>('.ngx-image-gallery-prev');
+
+    expect(document.activeElement).toBe(closeButton);
+
+    document.dispatchEvent(createKeyboardEvent('Tab'));
+    expect(document.activeElement).toBe(previousButton);
+
+    document.dispatchEvent(createKeyboardEvent('Tab', { shiftKey: true }));
+    expect(document.activeElement).toBe(closeButton);
+
+    service.close(false);
+
+    expect(document.activeElement).toBe(opener);
+  });
+
+  it('does not restore focus to a disconnected origin element', () => {
+    const opener = document.createElement('button');
+    opener.type = 'button';
+    document.body.appendChild(opener);
+    opener.focus();
+
+    service.open([{ fullSrc: 'full-1.jpg', thumbSrc: 'thumb-1.jpg' }], 0);
+    vi.advanceTimersByTime(333);
+    opener.remove();
+
+    expect(() => service.close(false)).not.toThrow();
+    expect(document.activeElement).not.toBe(opener);
+  });
+
   it('adds configured classes to generated lightbox elements', () => {
     service.open([{ fullSrc: 'full-1.jpg', thumbSrc: 'thumb-1.jpg' }], 0, {
       classes: {
@@ -358,6 +477,83 @@ describe('NgxImageGalleryService', () => {
     expect(thumbnails[2]?.getAttribute('aria-current')).toBe('true');
   });
 
+  it('hides inactive slides from assistive technology and labels the active slide', () => {
+    service.open(
+      [
+        { fullSrc: 'full-1.jpg', thumbSrc: 'thumb-1.jpg', alt: 'First image' },
+        { fullSrc: 'full-2.jpg', thumbSrc: 'thumb-2.jpg', alt: 'Second image' },
+        { fullSrc: 'full-3.jpg', thumbSrc: 'thumb-3.jpg', alt: 'Third image' },
+      ],
+      1,
+    );
+
+    const currentSlide = document.querySelector<HTMLElement>('.ngx-image-gallery-slide-current');
+    const hiddenSlides = document.querySelectorAll<HTMLElement>(
+      '.ngx-image-gallery-slide-prev, .ngx-image-gallery-slide-next',
+    );
+
+    expect(currentSlide?.getAttribute('role')).toBe('group');
+    expect(currentSlide?.getAttribute('aria-roledescription')).toBe('slide');
+    expect(currentSlide?.getAttribute('aria-hidden')).toBeNull();
+    expect(currentSlide?.getAttribute('aria-label')).toBe('2 / 3: Second image');
+    hiddenSlides.forEach((slide) => expect(slide.getAttribute('aria-hidden')).toBe('true'));
+  });
+
+  it('announces loading and error states only when they are active', async () => {
+    FakeImage.shouldError = true;
+
+    service.open([{ fullSrc: 'full-1.jpg', thumbSrc: 'thumb-1.jpg' }], 0, {
+      labels: {
+        loading: 'Loading custom image',
+        error: 'Custom image error',
+      },
+    });
+    vi.advanceTimersByTime(333);
+
+    const loading = document.querySelector<HTMLElement>('.ngx-image-gallery-loading');
+    const error = document.querySelector<HTMLElement>('.ngx-image-gallery-error');
+
+    expect(loading?.getAttribute('role')).toBe('status');
+    expect(loading?.getAttribute('aria-hidden')).toBe('false');
+    expect(loading?.textContent).toBe('Loading custom image');
+    expect(error?.getAttribute('aria-hidden')).toBe('true');
+
+    await vi.runOnlyPendingTimersAsync();
+
+    expect(loading?.getAttribute('aria-hidden')).toBe('true');
+    expect(error?.getAttribute('role')).toBe('alert');
+    expect(error?.getAttribute('aria-hidden')).toBe('false');
+    expect(error?.textContent).toBe('Custom image error');
+  });
+
+  it('jumps directly to non-adjacent thumbnails instead of animating through the next slide', () => {
+    service.open(
+      [
+        { fullSrc: 'full-1.jpg', thumbSrc: 'thumb-1.jpg' },
+        { fullSrc: 'full-2.jpg', thumbSrc: 'thumb-2.jpg' },
+        { fullSrc: 'full-3.jpg', thumbSrc: 'thumb-3.jpg' },
+        { fullSrc: 'full-4.jpg', thumbSrc: 'thumb-4.jpg' },
+      ],
+      0,
+      { showThumbnails: true },
+    );
+    vi.advanceTimersByTime(333);
+
+    const thumbnails = Array.from(
+      document.querySelectorAll<HTMLButtonElement>('.ngx-image-gallery-thumbnail'),
+    );
+    thumbnails[2]?.dispatchEvent(createMouseEvent('click', { clientX: 0, clientY: 0 }));
+
+    expect(service.activeIndex()).toBe(2);
+    expect(
+      document
+        .querySelector<HTMLImageElement>(
+          '.ngx-image-gallery-slide-current .ngx-image-gallery-thumb',
+        )
+        ?.getAttribute('src'),
+    ).toBe('thumb-3.jpg');
+  });
+
   it('zooms around the selected point and keeps zooming in on repeated double-click', () => {
     FakeImage.naturalWidthValue = 6400;
     FakeImage.naturalHeightValue = 3200;
@@ -388,6 +584,50 @@ describe('NgxImageGalleryService', () => {
 
     expect(wasNotPrevented).toBe(false);
     expect(media.style.transform).toBe('translate3d(-88px, 84px, 0) scale(1.25)');
+  });
+
+  it('supports keyboard zoom controls and reset', () => {
+    service.open([{ fullSrc: 'full-1.jpg', thumbSrc: 'thumb-1.jpg', width: 2400, height: 1200 }]);
+    vi.advanceTimersByTime(333);
+
+    const media = getMedia();
+
+    document.dispatchEvent(createKeyboardEvent('+'));
+
+    expect(media.style.transform).toContain('scale(1.25)');
+
+    document.dispatchEvent(createKeyboardEvent('-'));
+
+    expect(media.style.transform).toContain('scale(1)');
+
+    document.dispatchEvent(createKeyboardEvent('='));
+    expect(media.style.transform).toContain('scale(1.25)');
+
+    document.dispatchEvent(createKeyboardEvent('0'));
+
+    expect(media.style.transform).toContain('scale(1)');
+  });
+
+  it('does not run global gallery shortcuts from editable fields', () => {
+    service.open(
+      [
+        { fullSrc: 'full-1.jpg', thumbSrc: 'thumb-1.jpg' },
+        { fullSrc: 'full-2.jpg', thumbSrc: 'thumb-2.jpg' },
+      ],
+      0,
+    );
+    vi.advanceTimersByTime(333);
+
+    const input = document.createElement('input');
+    document.querySelector('.ngx-image-gallery-custom-ui')?.appendChild(input);
+    input.focus();
+
+    const keydown = createKeyboardEvent('ArrowRight');
+    input.dispatchEvent(keydown);
+    vi.advanceTimersByTime(220);
+
+    expect(keydown.defaultPrevented).toBe(false);
+    expect(service.activeIndex()).toBe(0);
   });
 
   it('pans the zoomed image opposite to mouse cursor movement', () => {
@@ -491,6 +731,48 @@ describe('NgxImageGalleryService', () => {
 
     expect(media.style.transition).toBe('');
   });
+
+  it('does not release pointer capture after the browser already released it', () => {
+    service.open([{ fullSrc: 'full-1.jpg', thumbSrc: 'thumb-1.jpg', width: 2400, height: 1200 }]);
+    vi.advanceTimersByTime(333);
+
+    const stage = getStage();
+    stage.setPointerCapture = vi.fn();
+    stage.hasPointerCapture = vi.fn(() => false);
+    stage.releasePointerCapture = vi.fn(() => {
+      throw new DOMException('Pointer is not captured', 'NotFoundError');
+    });
+
+    stage.dispatchEvent(
+      createPointerEvent('pointerdown', { pointerId: 1, clientX: 462, clientY: 384 }),
+    );
+    stage.dispatchEvent(
+      createPointerEvent('pointercancel', { pointerId: 1, clientX: 462, clientY: 384 }),
+    );
+
+    expect(stage.releasePointerCapture).not.toHaveBeenCalled();
+  });
+
+  it('passes an automated accessibility smoke check for the default lightbox', async () => {
+    service.open(
+      [
+        { fullSrc: 'full-1.jpg', thumbSrc: 'thumb-1.jpg', alt: 'First image' },
+        { fullSrc: 'full-2.jpg', thumbSrc: 'thumb-2.jpg', alt: 'Second image' },
+      ],
+      0,
+      { showThumbnails: true },
+    );
+    vi.advanceTimersByTime(333);
+    vi.useRealTimers();
+
+    const results = await axe.run(document.body, {
+      rules: {
+        'color-contrast': { enabled: false },
+      },
+    });
+
+    expect(results.violations).toEqual([]);
+  });
 });
 
 interface OriginElementOptions {
@@ -540,6 +822,12 @@ function getMedia(): HTMLDivElement {
   return media;
 }
 
+function getRenderedImageSources(): string[] {
+  return Array.from(document.querySelectorAll<HTMLImageElement>('.ngx-image-gallery-image')).map(
+    (image) => image.getAttribute('src') ?? '',
+  );
+}
+
 function createMouseEvent(
   eventName: string,
   options: Pick<MouseEventInit, 'clientX' | 'clientY'>,
@@ -556,6 +844,18 @@ function createWheelEvent(
 ): WheelEvent {
   return new WheelEvent('wheel', {
     ...options,
+    bubbles: true,
+    cancelable: true,
+  });
+}
+
+function createKeyboardEvent(
+  key: string,
+  options: Pick<KeyboardEventInit, 'shiftKey'> = {},
+): KeyboardEvent {
+  return new KeyboardEvent('keydown', {
+    ...options,
+    key,
     bubbles: true,
     cancelable: true,
   });

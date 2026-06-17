@@ -55,9 +55,9 @@ export const exampleCards: ExampleCard[] = [
     image: 'https://picsum.photos/id/1043/960/720',
   },
   {
-    title: 'Route sync',
-    description: 'Open slides from URLs and keep navigation shareable.',
-    path: '/examples/route-sync?image=coast',
+    title: 'Router close',
+    description: 'Close an open lightbox when the application route changes.',
+    path: '/examples/router-close',
     image: 'https://picsum.photos/id/1050/720/960',
   },
 ];
@@ -114,6 +114,12 @@ export const optionGroups: Array<{ title: string; options: ApiOption[] }> = [
         defaultValue: '{}',
         description: 'Adds classes to generated elements while preserving structural hooks.',
       },
+      {
+        name: 'labels',
+        type: 'NgxImageGalleryLabelsInput',
+        defaultValue: 'English labels',
+        description: 'Overrides generated dialog, control, counter, status, and thumbnail labels.',
+      },
     ],
   },
   {
@@ -135,7 +141,7 @@ export const optionGroups: Array<{ title: string; options: ApiOption[] }> = [
         name: 'alt',
         type: 'string',
         defaultValue: "''",
-        description: 'Accessible image text for thumbnails and lightbox media.',
+        description: 'Image text for thumbnails, lightbox media, slide labels, and controls.',
       },
       {
         name: 'srcset',
@@ -165,7 +171,7 @@ export const optionGroups: Array<{ title: string; options: ApiOption[] }> = [
         name: 'id',
         type: 'string',
         defaultValue: 'optional',
-        description: 'Stable item id, used by route sync and custom app logic.',
+        description: 'Stable item id for custom app logic.',
       },
       {
         name: 'data',
@@ -176,31 +182,20 @@ export const optionGroups: Array<{ title: string; options: ApiOption[] }> = [
     ],
   },
   {
-    title: 'Route sync options',
+    title: 'Router close options',
     options: [
       {
-        name: 'queryParam',
-        type: 'string',
-        defaultValue: "'image'",
-        description: 'Query parameter used to store the active slide id.',
-      },
-      {
-        name: 'id',
-        type: '(item, index) => string',
-        defaultValue: 'item.id ?? String(index)',
-        description: 'Maps each item to a stable route value.',
-      },
-      {
-        name: 'slideNavigation',
-        type: "'replace' | 'push'",
-        defaultValue: "'replace'",
-        description: 'Controls whether slide changes replace or push history entries.',
-      },
-      {
-        name: 'closeOnMissingItem',
+        name: 'closeOnNavigation',
         type: 'boolean',
         defaultValue: 'true',
-        description: 'Closes the managed lightbox and removes invalid route values.',
+        description: 'Closes the owned lightbox when Angular Router starts a navigation.',
+      },
+      {
+        name: 'closeOnHistoryBack',
+        type: 'boolean',
+        defaultValue: 'true',
+        description:
+          'Closes the owned lightbox for browser history navigations when route-wide closing is disabled.',
       },
     ],
   },
@@ -405,20 +400,57 @@ export const photos: NgxImageGalleryItem[] = [
     ],
   },
   {
-    slug: 'route-sync',
-    title: 'Route sync',
-    description: 'Use a secondary entrypoint when a gallery should be addressable by URL.',
+    slug: 'accessibility',
+    title: 'Accessibility',
+    description: 'Default dialog semantics, keyboard support, labels, and custom template duties.',
     sections: [
       {
-        title: 'Query-param lightbox state',
-        body: 'Route sync is opt-in. It uses query params so it can compose with an application route tree.',
+        title: 'Default lightbox',
+        body: 'The generated lightbox uses a modal dialog, moves focus inside on open, traps focus while open, restores connected opener focus on close, hides inactive slides from assistive technology, and announces loading or error states.',
+      },
+      {
+        title: 'Keyboard support',
+        body: 'The default controls support Escape close, ArrowLeft and ArrowRight navigation, Tab focus trapping, plus or equals to zoom in, minus to zoom out, and zero to reset zoom.',
+      },
+      {
+        title: 'Labels',
+        body: 'Use the labels option to localize generated UI text. Label values are assigned as text content or ARIA attributes, never as HTML.',
+        code: {
+          language: 'ts',
+          code: `readonly galleryOptions = {
+  labels: {
+    dialog: 'Product image gallery',
+    closeButton: 'Close product gallery',
+    counter: (current: number, total: number) => \`Image \${current} of \${total}\`,
+    thumbnailButton: (item: NgxImageGalleryItem, index: number, total: number) =>
+      item.alt
+        ? \`Show image \${index + 1} of \${total}: \${item.alt}\`
+        : \`Show image \${index + 1} of \${total}\`,
+  },
+};`,
+        },
+      },
+      {
+        title: 'Custom templates',
+        body: 'When a custom lightbox template replaces default controls, the app owns those controls semantics. Prefer native buttons, label icon-only controls, expose changing counters with aria-live, and keep item alt text meaningful.',
+      },
+    ],
+  },
+  {
+    slug: 'router-close',
+    title: 'Router close',
+    description: 'Use a secondary entrypoint when route changes should close an open lightbox.',
+    sections: [
+      {
+        title: 'Close on navigation',
+        body: 'Router close is opt-in. It does not write query params or open slides from the URL; it only closes the gallery-owned lightbox when Router navigation starts.',
         code: {
           language: 'html',
           code: `<div
   ngxImageGallery
-  [ngxImageGalleryRouteSync]="{
-    queryParam: 'image',
-    id: imageId,
+  [ngxImageGalleryCloseOnNavigation]="{
+    closeOnNavigation: true,
+    closeOnHistoryBack: true,
   }"
 >
   @for (photo of photos; track photo.id) {
@@ -434,10 +466,12 @@ export const photos: NgxImageGalleryItem[] = [
         body: 'The router integration is outside the primary entrypoint so core gallery consumers do not need Router.',
         code: {
           language: 'ts',
-          code: `import { NgxImageGalleryRouteSyncDirective } from 'ngx-image-gallery/router';
+          code: `import { NgxImageGalleryCloseOnNavigationDirective } from 'ngx-image-gallery/router';
 
-readonly imageId = (item: NgxImageGalleryItem, index: number): string =>
-  item.id ?? String(index);`,
+readonly closeOnNavigation = {
+  closeOnNavigation: true,
+  closeOnHistoryBack: true,
+};`,
         },
       },
     ],

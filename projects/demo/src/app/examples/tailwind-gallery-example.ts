@@ -25,12 +25,18 @@ import { DEMO_PHOTOS } from './demo-photos';
           <div
             class="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-3 p-4 text-white"
           >
-            <div class="rounded-full bg-black/55 px-3 py-2 text-sm font-medium backdrop-blur-md">
+            <div
+              data-testid="tailwind-lightbox-counter"
+              class="rounded-full bg-black/55 px-3 py-2 text-sm font-medium backdrop-blur-md"
+              aria-live="polite"
+            >
               {{ gallery.activeIndex + 1 }} / {{ gallery.count }}
             </div>
 
             <button
+              data-testid="tailwind-lightbox-close"
               type="button"
+              aria-label="Close gallery"
               class="pointer-events-auto inline-flex h-10 items-center rounded-full bg-white px-4 text-sm font-semibold text-neutral-950 shadow-lg transition hover:bg-neutral-200 focus:outline-none focus:ring-2 focus:ring-white/75"
               (click)="gallery.close()"
             >
@@ -42,6 +48,7 @@ import { DEMO_PHOTOS } from './demo-photos';
             <div class="flex items-center justify-center gap-2">
               <button
                 type="button"
+                aria-label="Show previous image"
                 class="pointer-events-auto inline-flex h-10 min-w-28 items-center justify-center rounded-full bg-white/15 px-4 text-sm font-semibold text-white backdrop-blur-md transition hover:bg-white/25 focus:outline-none focus:ring-2 focus:ring-white/75 disabled:opacity-35"
                 [disabled]="!gallery.canGoPrevious"
                 (click)="gallery.previous()"
@@ -51,6 +58,7 @@ import { DEMO_PHOTOS } from './demo-photos';
 
               <button
                 type="button"
+                aria-label="Show next image"
                 class="pointer-events-auto inline-flex h-10 min-w-28 items-center justify-center rounded-full bg-white px-4 text-sm font-semibold text-neutral-950 shadow-lg transition hover:bg-neutral-200 focus:outline-none focus:ring-2 focus:ring-white/75 disabled:opacity-35"
                 [disabled]="!gallery.canGoNext"
                 (click)="gallery.next()"

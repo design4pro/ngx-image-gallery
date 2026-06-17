@@ -11,6 +11,11 @@ export const routes: Routes = [
     redirectTo: 'examples/custom-properties',
   },
   {
+    path: 'examples/route-sync',
+    pathMatch: 'full',
+    redirectTo: () => '/examples/router-close',
+  },
+  {
     path: 'examples/:slug',
     loadComponent: () =>
       import('./pages/examples/examples-page').then((component) => component.ExamplesPage),
@@ -19,6 +24,11 @@ export const routes: Routes = [
     path: 'docs',
     pathMatch: 'full',
     redirectTo: 'docs/installation',
+  },
+  {
+    path: 'docs/route-sync',
+    pathMatch: 'full',
+    redirectTo: () => '/docs/router-close',
   },
   {
     path: 'docs/:slug',
@@ -37,7 +47,7 @@ export const routes: Routes = [
   {
     path: 'dynamic-pool',
     pathMatch: 'full',
-    redirectTo: 'examples/route-sync',
+    redirectTo: 'examples/router-close',
   },
   {
     path: '**',
