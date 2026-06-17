@@ -1723,7 +1723,11 @@ export class NgxImageGalleryService {
 
     const safeCandidates = candidates.map((candidate) => {
       const [source, ...descriptors] = candidate.split(/\s+/);
-      if (!source || !this.resolveSafeImageSource(source)) {
+      if (
+        !source ||
+        source.toLowerCase().startsWith('data:') ||
+        !this.resolveSafeImageSource(source)
+      ) {
         return null;
       }
 

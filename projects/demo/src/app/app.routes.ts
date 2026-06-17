@@ -13,7 +13,7 @@ export const routes: Routes = [
   {
     path: 'examples/route-sync',
     pathMatch: 'full',
-    redirectTo: () => '/examples/router-close',
+    redirectTo: 'examples/router-close',
   },
   {
     path: 'examples/:slug',
@@ -28,7 +28,7 @@ export const routes: Routes = [
   {
     path: 'docs/route-sync',
     pathMatch: 'full',
-    redirectTo: () => '/docs/router-close',
+    redirectTo: 'docs/router-close',
   },
   {
     path: 'docs/:slug',

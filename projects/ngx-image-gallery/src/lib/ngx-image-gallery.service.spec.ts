@@ -418,6 +418,24 @@ describe('NgxImageGalleryService', () => {
     expect(FakeImage.srcsets).toEqual([]);
   });
 
+  it('drops data image srcset candidates before loading the full image', () => {
+    service.open(
+      [
+        {
+          fullSrc: 'full-1.jpg',
+          thumbSrc: 'thumb-1.jpg',
+          srcset: 'data:image/png;base64,iVBORw0KGgo= 1x',
+        },
+      ],
+      0,
+    );
+
+    vi.advanceTimersByTime(333);
+
+    expect(FakeImage.requests).toEqual(['full-1.jpg']);
+    expect(FakeImage.srcsets).toEqual([]);
+  });
+
   it('moves focus into the dialog, traps it, and restores connected origin focus', () => {
     const opener = document.createElement('button');
     opener.type = 'button';
