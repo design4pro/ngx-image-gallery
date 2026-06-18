@@ -5,46 +5,38 @@ import { HlmButtonImports } from '@demo/ui/button';
 import {
   NgxImageGalleryDirective,
   NgxImageGalleryItemDirective,
-  type NgxImageGalleryItem,
   type NgxImageGalleryOpenOptions,
 } from 'ngx-image-gallery';
 import {
-  NgxImageGalleryRouteSyncDirective,
-  type NgxImageGalleryRouteSyncOptions,
+  NgxImageGalleryCloseOnNavigationDirective,
+  type NgxImageGalleryCloseOnNavigationOptions,
 } from 'ngx-image-gallery/router';
 import { DEMO_PHOTOS } from './demo-photos';
 
 @Component({
-  selector: 'app-route-sync-gallery-example',
+  selector: 'app-router-close-gallery-example',
   imports: [
     RouterLink,
     HlmBadgeImports,
     HlmButtonImports,
     NgxImageGalleryDirective,
     NgxImageGalleryItemDirective,
-    NgxImageGalleryRouteSyncDirective,
+    NgxImageGalleryCloseOnNavigationDirective,
   ],
   template: `
-    <section class="grid gap-5" aria-label="Route synchronized gallery demo">
+    <section class="grid gap-5" aria-label="Router close gallery demo">
       <div class="flex flex-wrap items-center gap-2">
-        <span hlmBadge variant="outline">URL controlled</span>
-        @for (photo of photos; track photo.id) {
-          <a
-            hlmBtn
-            variant="outline"
-            size="sm"
-            routerLink="/examples/route-sync"
-            [queryParams]="{ image: imageId(photo, $index) }"
-          >
-            Open {{ photo.id }}
-          </a>
-        }
+        <span hlmBadge variant="outline">Router close</span>
+        <a hlmBtn variant="outline" size="sm" routerLink="/examples/custom-properties">
+          Change route
+        </a>
+        <a hlmBtn variant="outline" size="sm" routerLink="/docs/router-close">Docs</a>
       </div>
 
       <div
         ngxImageGallery
         [ngxImageGallery]="options"
-        [ngxImageGalleryRouteSync]="routeSyncOptions"
+        [ngxImageGalleryCloseOnNavigation]="closeOnNavigation"
         class="grid grid-cols-1 gap-3 sm:grid-cols-3"
       >
         @for (photo of photos; track photo.id) {
@@ -62,7 +54,7 @@ import { DEMO_PHOTOS } from './demo-photos';
             <span
               class="absolute inset-x-3 bottom-3 rounded-md bg-white/85 px-2 py-1 text-xs font-medium text-zinc-950 shadow-sm backdrop-blur"
             >
-              ?image={{ imageId(photo, $index) }}
+              {{ photo.id }}
             </span>
           </a>
         }
@@ -70,21 +62,18 @@ import { DEMO_PHOTOS } from './demo-photos';
     </section>
   `,
 })
-export class RouteSyncGalleryExample {
+export class RouterCloseGalleryExample {
   protected readonly photos = DEMO_PHOTOS.slice(3);
-  protected readonly imageId = (item: NgxImageGalleryItem, index: number): string =>
-    item.id ?? String(index);
 
-  protected readonly routeSyncOptions: NgxImageGalleryRouteSyncOptions = {
-    queryParam: 'image',
-    id: this.imageId,
-    slideNavigation: 'push',
+  protected readonly closeOnNavigation: NgxImageGalleryCloseOnNavigationOptions = {
+    closeOnNavigation: true,
+    closeOnHistoryBack: true,
   };
 
   protected readonly options: Partial<NgxImageGalleryOpenOptions> = {
     showThumbnails: true,
     classes: {
-      overlay: 'route-sync-lightbox',
+      overlay: 'router-close-lightbox',
     },
   };
 }

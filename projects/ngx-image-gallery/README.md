@@ -1,27 +1,30 @@
 # ngx-image-gallery
 
-Native Angular image gallery with a PhotoSwipe-like lightbox experience, progressive image loading, and no runtime dependency on PhotoSwipe or a UI framework.
+Native Angular image gallery with a PhotoSwipe-like lightbox experience, progressive image loading, and no runtime dependency on PhotoSwipe or a third-party UI framework.
 
 ## Features
 
 - Standalone Angular directives and provider API.
-- UI-framework independent library package.
+- Angular-only library package with no dependency on third-party UI frameworks or design systems.
 - Stable generated class hooks and CSS custom properties for lightbox styling.
 - Optional configured classes for generated lightbox elements.
+- Configurable accessible labels for generated lightbox text.
 - Optional custom lightbox template with state and command context.
 - Optional lightbox thumbnail strip.
-- Optional URL-controlled lightbox state through the `ngx-image-gallery/router` secondary entrypoint.
+- Optional router-close behavior through the `ngx-image-gallery/router` secondary entrypoint.
 - Smooth opening animation from the clicked thumbnail.
 - No required original image dimensions.
 - Provisional sizing from the thumbnail, followed by recalculation from `naturalWidth` and `naturalHeight` after the original image loads.
 - Swipe, keyboard navigation, backdrop/escape close, focus restoration, double-click zoom, pinch zoom, and basic pan bounds.
-- Full image loading starts after the opening animation and only for the active slide.
+- Full image loading starts after the opening animation completes and only for the active slide.
 
 ## Install
 
 ```bash
 npm install ngx-image-gallery
 ```
+
+`ngx-image-gallery` is intended only for Angular applications. The default lightbox DOM and gestures are implemented by the library; consumers style them with CSS custom properties, configured classes, or an Angular template.
 
 ## Provide defaults
 
@@ -38,6 +41,9 @@ export const appConfig: ApplicationConfig = {
       closeOnBackdrop: true,
       showCounter: true,
       showThumbnails: false,
+      labels: {
+        dialog: 'Product image gallery',
+      },
       classes: {
         overlay: 'brand-lightbox',
       },
@@ -53,6 +59,14 @@ export const appConfig: ApplicationConfig = {
   <a *ngFor="let photo of photos" href="{{ photo.fullSrc }}" [ngxImageGalleryItem]="photo">
     <img [src]="photo.thumbSrc" [alt]="photo.alt" />
   </a>
+</div>
+```
+
+For the smallest cases, `ngxImageGalleryItem` can also receive a source string:
+
+```html
+<div ngxImageGallery>
+  <button type="button" [ngxImageGalleryItem]="'/photos/full.jpg'">Open image</button>
 </div>
 ```
 
@@ -100,6 +114,24 @@ readonly galleryOptions = {
 </div>
 ```
 
+## Accessibility labels
+
+The generated lightbox ships with English labels for the dialog, controls, counter, thumbnail buttons, loading state, and error state. Override only the labels your app needs to localize or customize:
+
+```ts
+readonly galleryOptions = {
+  labels: {
+    dialog: 'Product image gallery',
+    closeButton: 'Close product gallery',
+    counter: (current: number, total: number) => `Image ${current} of ${total}`,
+    thumbnailButton: (item: NgxImageGalleryItem, index: number, total: number) =>
+      item.alt ? `Show image ${index + 1} of ${total}: ${item.alt}` : `Show image ${index + 1} of ${total}`,
+  },
+};
+```
+
+Labels are written with `textContent` or ARIA attributes. They are never inserted as HTML.
+
 ## Tailwind classes
 
 The library does not depend on Tailwind. Consumers can use Tailwind utility classes in thumbnail markup, in custom templates, or through the `classes` option:
@@ -138,6 +170,8 @@ readonly galleryOptions = {
 ## Custom lightbox template
 
 Use `ng-template[ngxImageGalleryLightbox]` inside the gallery container to replace the default lightbox chrome. The image stage, dialog behavior, gestures, focus management, and progressive loading remain owned by the library.
+
+Custom templates own the accessibility semantics for their controls. Keep controls as native elements, give icon-only controls an accessible name, expose changing counters with `aria-live="polite"`, and use the item `alt` text when rendering thumbnail buttons.
 
 ```html
 <div ngxImageGallery>
@@ -184,21 +218,20 @@ interface NgxImageGalleryLightboxContext {
 }
 ```
 
-## Route sync
+## Router close
 
-Import `NgxImageGalleryRouteSyncDirective` from `ngx-image-gallery/router` when a gallery should be addressable by URL. The primary entrypoint does not require Angular Router.
+Import `NgxImageGalleryCloseOnNavigationDirective` from `ngx-image-gallery/router` when a gallery-owned lightbox should close as Angular Router navigation starts. The primary entrypoint does not require Angular Router.
 
 ```ts
-import { NgxImageGalleryRouteSyncDirective } from 'ngx-image-gallery/router';
+import { NgxImageGalleryCloseOnNavigationDirective } from 'ngx-image-gallery/router';
 ```
 
 ```html
 <div
   ngxImageGallery
-  [ngxImageGalleryRouteSync]="{
-    queryParam: 'image',
-    id: imageId,
-    slideNavigation: 'push',
+  [ngxImageGalleryCloseOnNavigation]="{
+    closeOnNavigation: true,
+    closeOnHistoryBack: true,
   }"
 >
   <a
@@ -212,11 +245,13 @@ import { NgxImageGalleryRouteSyncDirective } from 'ngx-image-gallery/router';
 ```
 
 ```ts
-readonly imageId = (item: NgxImageGalleryItem, index: number): string =>
-  item.id ?? String(index);
+readonly closeOnNavigation = {
+  closeOnNavigation: true,
+  closeOnHistoryBack: true,
+};
 ```
 
-Route sync uses `?image=...` by default. Opening a route-selected slide opens the lightbox, changing slides updates the query param, closing the lightbox removes it, and Back or Forward follows the URL state.
+Router close does not write query params and does not open slides from the URL. It closes only the lightbox owned by the directive host. Set `closeOnNavigation: false` and keep `closeOnHistoryBack: true` when only browser history navigation should close the lightbox.
 
 ## Item API
 
@@ -235,7 +270,21 @@ export interface NgxImageGalleryItem {
 }
 ```
 
-`width` and `height` are optional. If they are omitted, the gallery uses the rendered or natural thumbnail ratio and a provisional long edge until the original image finishes loading.
+`alt` should describe the image content for users who cannot inspect the image visually. Use an empty string only for decorative images. `width` and `height` are optional. If they are omitted, the gallery uses the rendered or natural thumbnail ratio and a provisional long edge until the original image finishes loading.
+
+## Image URL boundary
+
+`fullSrc`, `thumbSrc`, and `srcset` are application-owned image sources. Do not pass unsanitized user input into gallery items.
+
+The generated image elements assign only relative URLs, HTTP(S) URLs, blob URLs, and common raster `data:image` URLs for single image sources. Unsafe schemes are ignored. For `srcset`, use relative, HTTP(S), or blob candidates; if the list contains an unsafe candidate, the library drops the whole `srcset` value.
+
+Avoid embedding sensitive tokens in third-party image URLs because the browser still requests accepted remote images directly.
+
+## Keyboard and focus
+
+The default lightbox uses a modal dialog, moves focus into the dialog, traps focus within lightbox controls while open, marks existing body siblings as inert and `aria-hidden`, locks body scrolling, and restores focus to the opener when it is still connected. Keyboard support includes Escape close, ArrowLeft/ArrowRight navigation, `+` or `=` zoom in, `-` zoom out, and `0` reset zoom.
+
+Automated tests include an `axe-core` smoke check for the generated lightbox. The jsdom smoke test disables `color-contrast`; verify rendered contrast in a browser or design-system review when changing default colors.
 
 ## Class hooks
 
@@ -262,3 +311,7 @@ The `classes` option can add classes to:
 ## Attribution
 
 This package adapts selected PhotoSwipe v5 interaction and layout ideas for Angular. PhotoSwipe is MIT licensed. See `THIRD_PARTY_NOTICES.md`.
+
+## License
+
+MIT. See `LICENSE`.

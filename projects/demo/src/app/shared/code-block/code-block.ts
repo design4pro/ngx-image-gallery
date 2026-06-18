@@ -1,4 +1,12 @@
-import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import {
+  Component,
+  ViewEncapsulation,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 import { DomSanitizer, type SafeHtml } from '@angular/platform-browser';
 import { HlmSkeletonImports } from '@demo/ui/skeleton';
 import type { HighlighterCore } from 'shiki/core';
@@ -10,6 +18,7 @@ let highlighterPromise: Promise<HighlighterCore> | null = null;
 @Component({
   selector: 'app-code-block',
   imports: [HlmSkeletonImports],
+  encapsulation: ViewEncapsulation.None,
   template: `
     <div
       class="overflow-hidden rounded-md border border-zinc-200 bg-zinc-950 shadow-sm shadow-zinc-950/5"
@@ -35,24 +44,30 @@ let highlighterPromise: Promise<HighlighterCore> | null = null;
     </div>
   `,
   styles: `
-    :host {
+    app-code-block {
       display: block;
       min-width: 0;
       max-width: 100%;
     }
 
-    .code-block-scroll {
+    app-code-block .code-block-scroll {
       max-height: 520px;
       min-width: 0;
       overflow: auto;
+      padding: 0.875rem 1rem;
     }
 
-    .code-block-scroll :where(pre) {
+    app-code-block .code-block-scroll :where(pre) {
       margin: 0;
-      padding: 1rem;
+      min-width: max-content;
+      padding: 0;
       background: transparent !important;
-      font-size: 0.8125rem;
-      line-height: 1.7;
+      font-size: 0.75rem;
+      line-height: 1.6;
+    }
+
+    app-code-block .code-block-scroll :where(code) {
+      font: inherit;
     }
   `,
 })

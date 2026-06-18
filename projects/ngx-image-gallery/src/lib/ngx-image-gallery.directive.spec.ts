@@ -168,6 +168,33 @@ class PoolGalleryHostComponent {
 @Component({
   imports: [NgxImageGalleryDirective, NgxImageGalleryItemDirective],
   template: `
+    <button id="move-last-first" type="button" (click)="moveLastToFirst()">Move last first</button>
+
+    <div ngxImageGallery [ngxImageGallery]="{ showThumbnails: true }">
+      @for (item of items(); track item.fullSrc) {
+        <a class="ordered-item" [href]="item.fullSrc" [ngxImageGalleryItem]="item">
+          <img [src]="item.thumbSrc" [alt]="item.alt" />
+        </a>
+      }
+    </div>
+  `,
+})
+class ReorderedGalleryHostComponent {
+  readonly items = signal<NgxImageGalleryItem[]>([
+    { fullSrc: 'ordered-a-full.jpg', thumbSrc: 'ordered-a-thumb.jpg', alt: 'Ordered A' },
+    { fullSrc: 'ordered-b-full.jpg', thumbSrc: 'ordered-b-thumb.jpg', alt: 'Ordered B' },
+    { fullSrc: 'ordered-c-full.jpg', thumbSrc: 'ordered-c-thumb.jpg', alt: 'Ordered C' },
+  ]);
+
+  moveLastToFirst(): void {
+    const [first, second, third] = this.items();
+    this.items.set([third, first, second]);
+  }
+}
+
+@Component({
+  imports: [NgxImageGalleryDirective, NgxImageGalleryItemDirective],
+  template: `
     @if (showFirstGallery()) {
       <div ngxImageGallery>
         <a id="first-gallery-item" href="first-gallery-full.jpg" [ngxImageGalleryItem]="firstItem">
@@ -277,6 +304,25 @@ describe('ngxImageGallery route and pool changes', () => {
 
     expect(service.activeItem()?.fullSrc).toBe('pool-b-full-1.jpg');
     expect(getRenderedImageSources()).not.toContain('pool-a-thumb-1.jpg');
+  });
+
+  it('opens reordered gallery items in their current DOM order', async () => {
+    await TestBed.configureTestingModule({
+      imports: [ReorderedGalleryHostComponent],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(ReorderedGalleryHostComponent);
+    service = TestBed.inject(NgxImageGalleryService);
+    fixture.detectChanges();
+
+    click(fixture.nativeElement.querySelector('#move-last-first'));
+    fixture.detectChanges();
+
+    click(fixture.nativeElement.querySelector('.ordered-item'));
+    fixture.detectChanges();
+
+    expect(service.activeIndex()).toBe(0);
+    expect(service.activeItem()?.fullSrc).toBe('ordered-c-full.jpg');
   });
 
   it('keeps another gallery open when an inactive gallery is destroyed', async () => {

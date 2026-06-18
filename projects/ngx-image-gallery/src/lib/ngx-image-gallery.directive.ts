@@ -63,7 +63,8 @@ export class NgxImageGalleryDirective implements OnDestroy {
   }
 
   open(index = 0): void {
-    const items = this.getItems();
+    const itemDirectives = this.getOrderedItemDirectives();
+    const items = this.getItemsFromDirectives(itemDirectives);
     if (items.length === 0) {
       return;
     }
@@ -74,35 +75,36 @@ export class NgxImageGalleryDirective implements OnDestroy {
       {
         ...this.getOptions(),
         ...this.getLightboxOptions(),
-        originElement: this.itemDirectives[index]?.originElement ?? this.elementRef.nativeElement,
-        originElements: this.itemDirectives.map((item) => item.originElement),
+        originElement: itemDirectives[index]?.originElement ?? this.elementRef.nativeElement,
+        originElements: itemDirectives.map((item) => item.originElement),
       },
       this.owner,
     );
   }
 
   openItem(item: NgxImageGalleryItemDirective, event?: MouseEvent): void {
-    const index = this.itemDirectives.indexOf(item);
+    const itemDirectives = this.getOrderedItemDirectives();
+    const index = itemDirectives.indexOf(item);
     if (index < 0) {
       return;
     }
 
     event?.preventDefault();
     this.gallery.open(
-      this.getItems(),
+      this.getItemsFromDirectives(itemDirectives),
       index,
       {
         ...this.getOptions(),
         ...this.getLightboxOptions(),
         originElement: item.originElement,
-        originElements: this.itemDirectives.map((registeredItem) => registeredItem.originElement),
+        originElements: itemDirectives.map((registeredItem) => registeredItem.originElement),
       },
       this.owner,
     );
   }
 
   getItems(): NgxImageGalleryItem[] {
-    return this.itemDirectives.map((item) => item.galleryItem);
+    return this.getItemsFromDirectives(this.getOrderedItemDirectives());
   }
 
   private getOptions(): Partial<NgxImageGalleryOpenOptions> {
@@ -134,5 +136,41 @@ export class NgxImageGalleryDirective implements OnDestroy {
         this.itemsVersionState.update((version) => version + 1);
       }
     });
+  }
+
+  private getOrderedItemDirectives(): NgxImageGalleryItemDirective[] {
+    return [...this.itemDirectives].sort((first, second) => {
+      if (first === second) {
+        return 0;
+      }
+
+      const firstIndex = this.itemDirectives.indexOf(first);
+      const secondIndex = this.itemDirectives.indexOf(second);
+      const firstElement = first.originElement;
+      const secondElement = second.originElement;
+
+      if (!firstElement.isConnected || !secondElement.isConnected) {
+        return firstIndex - secondIndex;
+      }
+
+      const position = firstElement.compareDocumentPosition(secondElement);
+      if (position & firstElement.DOCUMENT_POSITION_DISCONNECTED) {
+        return firstIndex - secondIndex;
+      }
+      if (position & firstElement.DOCUMENT_POSITION_FOLLOWING) {
+        return -1;
+      }
+      if (position & firstElement.DOCUMENT_POSITION_PRECEDING) {
+        return 1;
+      }
+
+      return firstIndex - secondIndex;
+    });
+  }
+
+  private getItemsFromDirectives(
+    itemDirectives: readonly NgxImageGalleryItemDirective[],
+  ): NgxImageGalleryItem[] {
+    return itemDirectives.map((item) => item.galleryItem);
   }
 }

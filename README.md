@@ -20,8 +20,8 @@ Main routes:
 - `/`: landing page with a live gallery preview.
 - `/examples/custom-properties`: pure CSS and custom properties gallery demo.
 - `/examples/tailwind`: Tailwind 4 gallery demo.
-- `/examples/route-sync`: URL-controlled lightbox demo.
-- `/docs/installation`, `/docs/usage`, `/docs/options`, `/docs/styling`, `/docs/custom-lightbox`, `/docs/route-sync`: documentation routes.
+- `/examples/router-close`: router-close lightbox demo.
+- `/docs/installation`, `/docs/usage`, `/docs/options`, `/docs/styling`, `/docs/custom-lightbox`, `/docs/accessibility`, `/docs/router-close`: documentation routes.
 
 ## Build
 
@@ -66,4 +66,15 @@ npx prettier --check .
 
 ## Design Notes
 
-Read `DESIGN.md` before changing library architecture or public API. The library intentionally stays independent of UI frameworks. Tailwind is used only by the demo as a consumer styling example.
+Read `DESIGN.md` before changing library architecture or public API. The library intentionally avoids third-party UI framework dependencies. Tailwind is used only by the demo as a consumer styling example.
+
+## Package Artifact
+
+Build the Angular package before packing or publishing:
+
+```bash
+npx ng build ngx-image-gallery
+npm pack ./dist/ngx-image-gallery --dry-run
+```
+
+Do not pack `projects/ngx-image-gallery` directly; that is the source package, not the built Angular Package Format artifact.

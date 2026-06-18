@@ -115,8 +115,7 @@ import { exampleCards } from '../../shared/docsite/docsite-data';
         <span hlmBadge variant="secondary" class="w-fit">Examples</span>
         <h2 hlmH2>Styling approaches</h2>
         <p hlmP class="max-w-2xl">
-          Compare plain CSS custom properties, Tailwind utility markup, and route-aware lightbox
-          state.
+          Compare plain CSS custom properties, Tailwind utility markup, and router-close behavior.
         </p>
       </div>
 
@@ -124,8 +123,7 @@ import { exampleCards } from '../../shared/docsite/docsite-data';
         @for (example of examples; track example.path) {
           <a
             class="group overflow-hidden rounded-md border bg-background shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950"
-            [routerLink]="example.path.split('?')[0]"
-            [queryParams]="example.path.includes('?') ? { image: 'coast' } : null"
+            [routerLink]="example.path"
           >
             <img
               class="aspect-[4/3] w-full object-cover"

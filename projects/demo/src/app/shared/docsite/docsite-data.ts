@@ -55,9 +55,9 @@ export const exampleCards: ExampleCard[] = [
     image: 'https://picsum.photos/id/1043/960/720',
   },
   {
-    title: 'Route sync',
-    description: 'Open slides from URLs and keep navigation shareable.',
-    path: '/examples/route-sync?image=coast',
+    title: 'Router close',
+    description: 'Close an open lightbox when the application route changes.',
+    path: '/examples/router-close',
     image: 'https://picsum.photos/id/1050/720/960',
   },
 ];
@@ -66,12 +66,6 @@ export const optionGroups: Array<{ title: string; options: ApiOption[] }> = [
   {
     title: 'Gallery options',
     options: [
-      {
-        name: 'loadOriginal',
-        type: "'after-open'",
-        defaultValue: "'after-open'",
-        description: 'Loads the original image after the opening animation starts.',
-      },
       {
         name: 'provisionalLongEdge',
         type: 'number',
@@ -114,6 +108,12 @@ export const optionGroups: Array<{ title: string; options: ApiOption[] }> = [
         defaultValue: '{}',
         description: 'Adds classes to generated elements while preserving structural hooks.',
       },
+      {
+        name: 'labels',
+        type: 'NgxImageGalleryLabelsInput',
+        defaultValue: 'English labels',
+        description: 'Overrides generated dialog, control, counter, status, and thumbnail labels.',
+      },
     ],
   },
   {
@@ -123,25 +123,26 @@ export const optionGroups: Array<{ title: string; options: ApiOption[] }> = [
         name: 'fullSrc',
         type: 'string',
         defaultValue: 'required',
-        description: 'Original image URL used inside the lightbox.',
+        description: 'Application-owned original image URL used inside the lightbox.',
       },
       {
         name: 'thumbSrc',
         type: 'string',
         defaultValue: 'fullSrc',
-        description: 'Thumbnail URL used in previews and thumbnail controls.',
+        description: 'Application-owned thumbnail URL used in previews and thumbnail controls.',
       },
       {
         name: 'alt',
         type: 'string',
         defaultValue: "''",
-        description: 'Accessible image text for thumbnails and lightbox media.',
+        description: 'Image text for thumbnails, lightbox media, slide labels, and controls.',
       },
       {
         name: 'srcset',
         type: 'string',
         defaultValue: 'undefined',
-        description: 'Responsive source set for the loaded full-size image.',
+        description:
+          'Responsive source set for the loaded full-size image. Unsafe lists are ignored.',
       },
       {
         name: 'sizes',
@@ -165,7 +166,7 @@ export const optionGroups: Array<{ title: string; options: ApiOption[] }> = [
         name: 'id',
         type: 'string',
         defaultValue: 'optional',
-        description: 'Stable item id, used by route sync and custom app logic.',
+        description: 'Stable item id for custom app logic.',
       },
       {
         name: 'data',
@@ -176,31 +177,20 @@ export const optionGroups: Array<{ title: string; options: ApiOption[] }> = [
     ],
   },
   {
-    title: 'Route sync options',
+    title: 'Router close options',
     options: [
       {
-        name: 'queryParam',
-        type: 'string',
-        defaultValue: "'image'",
-        description: 'Query parameter used to store the active slide id.',
-      },
-      {
-        name: 'id',
-        type: '(item, index) => string',
-        defaultValue: 'item.id ?? String(index)',
-        description: 'Maps each item to a stable route value.',
-      },
-      {
-        name: 'slideNavigation',
-        type: "'replace' | 'push'",
-        defaultValue: "'replace'",
-        description: 'Controls whether slide changes replace or push history entries.',
-      },
-      {
-        name: 'closeOnMissingItem',
+        name: 'closeOnNavigation',
         type: 'boolean',
         defaultValue: 'true',
-        description: 'Closes the managed lightbox and removes invalid route values.',
+        description: 'Closes the owned lightbox when Angular Router starts a navigation.',
+      },
+      {
+        name: 'closeOnHistoryBack',
+        type: 'boolean',
+        defaultValue: 'true',
+        description:
+          'Closes the owned lightbox for browser history navigations when route-wide closing is disabled.',
       },
     ],
   },
@@ -266,7 +256,7 @@ export const docs: DocPage[] = [
     sections: [
       {
         title: 'Install the package',
-        body: 'The runtime package only peers Angular. Tailwind, Spartan, and app design systems stay outside the library.',
+        body: 'The runtime package is Angular-only and has no dependency on third-party UI frameworks. Tailwind, Spartan, and app design systems stay outside the library.',
         code: {
           language: 'bash',
           code: 'npm install ngx-image-gallery',
@@ -316,7 +306,7 @@ export const appConfig: ApplicationConfig = {
       },
       {
         title: 'Item data',
-        body: 'Only fullSrc is required. Dimensions, srcset, and route ids can be added when your app has them.',
+        body: 'Only fullSrc is required. Dimensions, srcset, and stable ids can be added when your app has them.',
         code: {
           language: 'ts',
           code: `import type { NgxImageGalleryItem } from 'ngx-image-gallery';
@@ -330,6 +320,10 @@ export const photos: NgxImageGalleryItem[] = [
   },
 ];`,
         },
+      },
+      {
+        title: 'Image URL boundary',
+        body: 'Gallery image URLs are application-owned data. The library assigns only relative URLs, HTTP(S) URLs, blob URLs, and common raster data:image URLs for single image sources; unsafe schemes are ignored. Use relative, HTTP(S), or blob candidates in srcset because an unsafe candidate drops the whole srcset value.',
       },
     ],
   },
@@ -405,20 +399,61 @@ export const photos: NgxImageGalleryItem[] = [
     ],
   },
   {
-    slug: 'route-sync',
-    title: 'Route sync',
-    description: 'Use a secondary entrypoint when a gallery should be addressable by URL.',
+    slug: 'accessibility',
+    title: 'Accessibility',
+    description: 'Default dialog semantics, keyboard support, labels, and custom template duties.',
     sections: [
       {
-        title: 'Query-param lightbox state',
-        body: 'Route sync is opt-in. It uses query params so it can compose with an application route tree.',
+        title: 'Default lightbox',
+        body: 'The generated lightbox uses a modal dialog, moves focus inside on open, traps focus in lightbox controls, marks existing body siblings inert and aria-hidden, locks body scrolling, restores connected opener focus on close, hides inactive slides from assistive technology, and announces loading or error states.',
+      },
+      {
+        title: 'Keyboard support',
+        body: 'The default controls support Escape close, ArrowLeft and ArrowRight navigation, Tab focus trapping, plus or equals to zoom in, minus to zoom out, and zero to reset zoom.',
+      },
+      {
+        title: 'Labels',
+        body: 'Use the labels option to localize generated UI text. Label values are assigned as text content or ARIA attributes, never as HTML.',
+        code: {
+          language: 'ts',
+          code: `readonly galleryOptions = {
+  labels: {
+    dialog: 'Product image gallery',
+    closeButton: 'Close product gallery',
+    counter: (current: number, total: number) => \`Image \${current} of \${total}\`,
+    thumbnailButton: (item: NgxImageGalleryItem, index: number, total: number) =>
+      item.alt
+        ? \`Show image \${index + 1} of \${total}: \${item.alt}\`
+        : \`Show image \${index + 1} of \${total}\`,
+  },
+};`,
+        },
+      },
+      {
+        title: 'Custom templates',
+        body: 'When a custom lightbox template replaces default controls, the app owns those controls semantics. Prefer native buttons, label icon-only controls, expose changing counters with aria-live, and keep item alt text meaningful.',
+      },
+      {
+        title: 'Color contrast',
+        body: 'Automated jsdom accessibility smoke tests do not measure rendered contrast. Verify contrast in a browser when changing default colors or theme tokens.',
+      },
+    ],
+  },
+  {
+    slug: 'router-close',
+    title: 'Router close',
+    description: 'Use a secondary entrypoint when route changes should close an open lightbox.',
+    sections: [
+      {
+        title: 'Close on navigation',
+        body: 'Router close is opt-in. It does not write query params or open slides from the URL; it only closes the gallery-owned lightbox when Router navigation starts.',
         code: {
           language: 'html',
           code: `<div
   ngxImageGallery
-  [ngxImageGalleryRouteSync]="{
-    queryParam: 'image',
-    id: imageId,
+  [ngxImageGalleryCloseOnNavigation]="{
+    closeOnNavigation: true,
+    closeOnHistoryBack: true,
   }"
 >
   @for (photo of photos; track photo.id) {
@@ -434,10 +469,12 @@ export const photos: NgxImageGalleryItem[] = [
         body: 'The router integration is outside the primary entrypoint so core gallery consumers do not need Router.',
         code: {
           language: 'ts',
-          code: `import { NgxImageGalleryRouteSyncDirective } from 'ngx-image-gallery/router';
+          code: `import { NgxImageGalleryCloseOnNavigationDirective } from 'ngx-image-gallery/router';
 
-readonly imageId = (item: NgxImageGalleryItem, index: number): string =>
-  item.id ?? String(index);`,
+readonly closeOnNavigation = {
+  closeOnNavigation: true,
+  closeOnHistoryBack: true,
+};`,
         },
       },
     ],

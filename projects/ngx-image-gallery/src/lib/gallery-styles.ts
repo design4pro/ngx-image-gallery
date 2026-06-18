@@ -11,11 +11,11 @@ export const GALLERY_STYLES = `
   --ngx-image-gallery-full-image-transition: opacity 180ms ease;
   --ngx-image-gallery-ui-transition: opacity 160ms ease;
   --ngx-image-gallery-control-color: #fff;
-  --ngx-image-gallery-control-background: rgba(20, 20, 20, 0.48);
+  --ngx-image-gallery-control-background: rgba(20, 20, 20, 0.72);
   --ngx-image-gallery-control-border-radius: 4px;
   --ngx-image-gallery-control-size: 44px;
   --ngx-image-gallery-control-offset: 16px;
-  --ngx-image-gallery-control-focus-outline: 2px solid #fff;
+  --ngx-image-gallery-control-focus-outline: 3px solid #fff;
   --ngx-image-gallery-counter-padding: 0 12px;
   --ngx-image-gallery-counter-font-size: 14px;
   --ngx-image-gallery-thumbnails-gap: 8px;
@@ -169,6 +169,7 @@ export const GALLERY_STYLES = `
 .ngx-image-gallery-button:focus-visible {
   outline: var(--ngx-image-gallery-control-focus-outline);
   outline-offset: 2px;
+  box-shadow: 0 0 0 5px rgba(0, 0, 0, 0.72);
 }
 .ngx-image-gallery-close {
   top: var(--ngx-image-gallery-control-offset);
@@ -229,6 +230,7 @@ export const GALLERY_STYLES = `
 .ngx-image-gallery-thumbnail:focus-visible {
   outline: var(--ngx-image-gallery-control-focus-outline);
   outline-offset: 2px;
+  box-shadow: 0 0 0 5px rgba(0, 0, 0, 0.72);
 }
 .ngx-image-gallery-thumbnail-image {
   display: block;
