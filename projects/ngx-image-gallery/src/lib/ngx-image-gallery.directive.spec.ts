@@ -3,6 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router, RouterOutlet } from '@angular/router';
 import { NgxImageGalleryDirective } from './ngx-image-gallery.directive';
 import { NgxImageGalleryItemDirective } from './ngx-image-gallery-item.directive';
+import { NgxImageGalleryItemContentDirective } from './ngx-image-gallery-item-content.directive';
 import { NgxImageGalleryLightboxDirective } from './ngx-image-gallery-lightbox.directive';
 import { NgxImageGalleryService } from './ngx-image-gallery.service';
 import type { NgxImageGalleryItem } from './gallery-types';
@@ -36,12 +37,66 @@ class HostComponent {
   ];
 }
 
+@Component({
+  imports: [
+    NgxImageGalleryDirective,
+    NgxImageGalleryItemDirective,
+    NgxImageGalleryItemContentDirective,
+  ],
+  template: `
+    <div ngxImageGallery>
+      <button id="custom-item" type="button" [ngxImageGalleryItem]="customItem">
+        Open custom item
+        <ng-template
+          ngxImageGalleryItemContent
+          let-item
+          let-index="index"
+          let-count="count"
+          let-active="active"
+          let-gallery="gallery"
+        >
+          <section
+            id="custom-item-content"
+            [attr.data-kind]="getItemKind(item)"
+            [attr.data-index]="index"
+            [attr.data-count]="count"
+            [attr.data-active]="active"
+          >
+            <button id="custom-item-close" type="button" (click)="gallery.close()">Close</button>
+          </section>
+        </ng-template>
+      </button>
+
+      <a id="image-item" href="full-2.jpg" [ngxImageGalleryItem]="imageItem">
+        <img src="thumb-2.jpg" alt="Second" />
+      </a>
+    </div>
+  `,
+})
+class ItemContentHostComponent {
+  readonly customItem: NgxImageGalleryItem = {
+    thumbSrc: 'custom-thumb.jpg',
+    alt: 'Custom analytics',
+    data: { kind: 'analytics' },
+  };
+  readonly imageItem: NgxImageGalleryItem = {
+    fullSrc: 'full-2.jpg',
+    thumbSrc: 'thumb-2.jpg',
+    alt: 'Second',
+  };
+
+  getItemKind(item: NgxImageGalleryItem): string {
+    return (item.data as { kind: string }).kind;
+  }
+}
+
 describe('ngxImageGallery directives', () => {
   let fixture: ComponentFixture<HostComponent>;
   let service: NgxImageGalleryService;
   let originalAnimationFrame: typeof window.requestAnimationFrame;
 
   beforeEach(async () => {
+    vi.useFakeTimers();
     originalAnimationFrame = window.requestAnimationFrame;
     window.requestAnimationFrame = (callback: FrameRequestCallback): number => {
       callback(0);
@@ -61,6 +116,7 @@ describe('ngxImageGallery directives', () => {
     service.close(false);
     window.requestAnimationFrame = originalAnimationFrame;
     document.body.innerHTML = '';
+    vi.useRealTimers();
   });
 
   it('opens the gallery from the clicked registered item', () => {
@@ -85,6 +141,28 @@ describe('ngxImageGallery directives', () => {
 
     expect(status?.textContent?.trim()).toBe('1 / 2');
     expect(defaultUi?.hasAttribute('hidden')).toBe(true);
+  });
+
+  it('renders per-item custom content with item and gallery context', () => {
+    const customFixture = TestBed.createComponent(ItemContentHostComponent);
+    customFixture.detectChanges();
+    const item = customFixture.nativeElement.querySelector('#custom-item') as HTMLButtonElement;
+
+    item.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
+    customFixture.detectChanges();
+
+    const content = document.querySelector<HTMLElement>('#custom-item-content');
+    const close = document.querySelector<HTMLButtonElement>('#custom-item-close');
+
+    expect(content?.getAttribute('data-kind')).toBe('analytics');
+    expect(content?.getAttribute('data-index')).toBe('0');
+    expect(content?.getAttribute('data-count')).toBe('2');
+    expect(content?.getAttribute('data-active')).toBe('true');
+
+    close?.click();
+    vi.advanceTimersByTime(350);
+
+    expect(service.isOpen()).toBe(false);
   });
 });
 

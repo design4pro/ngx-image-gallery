@@ -7,7 +7,7 @@ import {
   inject,
   input,
 } from '@angular/core';
-import type { NgxImageGalleryItem } from './gallery-types';
+import type { NgxImageGalleryItem, NgxImageGalleryItemContentTemplate } from './gallery-types';
 import { NgxImageGalleryDirective } from './ngx-image-gallery.directive';
 
 @Directive({
@@ -16,6 +16,7 @@ import { NgxImageGalleryDirective } from './ngx-image-gallery.directive';
 })
 export class NgxImageGalleryItemDirective implements OnInit, OnDestroy {
   private readonly elementRef = inject<ElementRef<HTMLElement>>(ElementRef);
+  private contentTemplate: NgxImageGalleryItemContentTemplate | null = null;
   private readonly parentGallery = inject(NgxImageGalleryDirective, {
     host: true,
     optional: true,
@@ -30,6 +31,20 @@ export class NgxImageGalleryItemDirective implements OnInit, OnDestroy {
   get galleryItem(): NgxImageGalleryItem {
     const item = this.ngxImageGalleryItem();
     return typeof item === 'string' ? { fullSrc: item } : item;
+  }
+
+  get itemContentTemplate(): NgxImageGalleryItemContentTemplate | undefined {
+    return this.contentTemplate ?? undefined;
+  }
+
+  registerContent(contentTemplate: NgxImageGalleryItemContentTemplate): void {
+    this.contentTemplate = contentTemplate;
+  }
+
+  unregisterContent(templateRef: NgxImageGalleryItemContentTemplate['templateRef']): void {
+    if (this.contentTemplate?.templateRef === templateRef) {
+      this.contentTemplate = null;
+    }
   }
 
   ngOnInit(): void {

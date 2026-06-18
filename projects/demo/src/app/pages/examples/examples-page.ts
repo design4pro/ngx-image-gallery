@@ -7,12 +7,13 @@ import { HlmSeparatorImports } from '@demo/ui/separator';
 import { HlmTypographyImports } from '@demo/ui/typography';
 import { map } from 'rxjs';
 import { CssPropertiesGalleryExample } from '../../examples/css-properties-gallery-example';
+import { CustomContentGalleryExample } from '../../examples/custom-content-gallery-example';
 import { RouterCloseGalleryExample } from '../../examples/router-close-gallery-example';
 import { TailwindGalleryExample } from '../../examples/tailwind-gallery-example';
 import { CodeBlock } from '../../shared/code-block/code-block';
 import { exampleCards } from '../../shared/docsite/docsite-data';
 
-type ExampleSlug = 'custom-properties' | 'tailwind' | 'router-close';
+type ExampleSlug = 'custom-properties' | 'tailwind' | 'custom-content' | 'router-close';
 
 const EXAMPLE_COPY: Record<
   ExampleSlug,
@@ -48,6 +49,23 @@ const EXAMPLE_COPY: Record<
   </ng-template>
 </div>`,
   },
+  'custom-content': {
+    eyebrow: 'Component slides',
+    title: 'Custom content',
+    description:
+      'Render an Angular component inside the lightbox for item data that does not have a full image source.',
+    language: 'html',
+    snippet: `<button type="button" [ngxImageGalleryItem]="item">
+  Open custom content
+
+  <ng-template ngxImageGalleryItemContent let-item let-gallery="gallery">
+    <app-gallery-insight-card
+      [insight]="item.data"
+      (closed)="gallery.close()"
+    />
+  </ng-template>
+</button>`,
+  },
   'router-close': {
     eyebrow: 'Router close',
     title: 'Close on navigation',
@@ -67,6 +85,7 @@ const EXAMPLE_COPY: Record<
     RouterLink,
     CodeBlock,
     CssPropertiesGalleryExample,
+    CustomContentGalleryExample,
     RouterCloseGalleryExample,
     TailwindGalleryExample,
     HlmBadgeImports,
@@ -110,6 +129,9 @@ const EXAMPLE_COPY: Record<
             }
             @case ('router-close') {
               <app-router-close-gallery-example />
+            }
+            @case ('custom-content') {
+              <app-custom-content-gallery-example />
             }
             @default {
               <app-css-properties-gallery-example />
@@ -163,7 +185,9 @@ export class ExamplesPage {
   protected readonly examples = exampleCards;
   protected readonly slug = computed<ExampleSlug>(() => {
     const slug = this.routeSlug();
-    return slug === 'tailwind' || slug === 'router-close' ? slug : 'custom-properties';
+    return slug === 'tailwind' || slug === 'custom-content' || slug === 'router-close'
+      ? slug
+      : 'custom-properties';
   });
   protected readonly copy = computed(() => EXAMPLE_COPY[this.slug()]);
 }

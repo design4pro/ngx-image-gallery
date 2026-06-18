@@ -104,6 +104,13 @@ export const GALLERY_STYLES = `
   -webkit-user-drag: none;
   touch-action: none;
 }
+.ngx-image-gallery-content {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: auto;
+}
 .ngx-image-gallery-thumb {
   filter: blur(0);
 }
