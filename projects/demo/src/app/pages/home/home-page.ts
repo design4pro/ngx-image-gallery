@@ -5,7 +5,6 @@ import { RouterLink } from '@angular/router';
 import { HlmBadgeImports } from '@demo/ui/badge';
 import { HlmButtonImports } from '@demo/ui/button';
 import { HlmIconImports } from '@demo/ui/icon';
-import { HlmSeparatorImports } from '@demo/ui/separator';
 import { HlmTypographyImports } from '@demo/ui/typography';
 import {
   NgxImageGalleryDirective,
@@ -24,7 +23,6 @@ import { exampleCards } from '../../shared/docsite/docsite-data';
     HlmBadgeImports,
     HlmButtonImports,
     HlmIconImports,
-    HlmSeparatorImports,
     HlmTypographyImports,
     NgxImageGalleryDirective,
     NgxImageGalleryItemDirective,
@@ -41,7 +39,7 @@ import { exampleCards } from '../../shared/docsite/docsite-data';
             <h1 hlmH1 class="max-w-4xl text-balance [overflow-wrap:anywhere]">ngx-image-gallery</h1>
             <p hlmLead class="max-w-2xl text-pretty">
               A directive-first image gallery with progressive loading, gestures, keyboard
-              navigation, custom lightbox chrome, CSS tokens, and optional URL state.
+              navigation, custom lightbox content, CSS tokens, and optional router-close behavior.
             </p>
           </div>
 
@@ -70,9 +68,9 @@ import { exampleCards } from '../../shared/docsite/docsite-data';
             </div>
             <div class="rounded-md border bg-background p-4">
               <ng-icon hlm name="lucideRoute" class="mb-3 text-zinc-950" />
-              <h2 class="text-sm font-semibold">Shareable lightboxes</h2>
+              <h2 class="text-sm font-semibold">Route-aware close</h2>
               <p class="mt-2 text-sm text-muted-foreground">
-                Use the router entrypoint when image state belongs in the URL.
+                Close the active lightbox when Angular Router navigation starts.
               </p>
             </div>
           </div>
@@ -115,7 +113,8 @@ import { exampleCards } from '../../shared/docsite/docsite-data';
         <span hlmBadge variant="secondary" class="w-fit">Examples</span>
         <h2 hlmH2>Styling approaches</h2>
         <p hlmP class="max-w-2xl">
-          Compare plain CSS custom properties, Tailwind utility markup, and router-close behavior.
+          Compare plain CSS custom properties, Tailwind utility markup, custom content, and
+          router-close behavior.
         </p>
       </div>
 
@@ -145,18 +144,17 @@ import { exampleCards } from '../../shared/docsite/docsite-data';
           <span hlmBadge variant="outline" class="w-fit">API shape</span>
           <h2 hlmH2>Directive markup, consumer styling</h2>
         </div>
-        <hlm-separator decorative />
         <div class="grid gap-4 md:grid-cols-3">
           <p class="text-sm leading-6 text-muted-foreground">
             <code>ngxImageGallery</code> registers the item directives and opens the lightbox from
             the clicked thumbnail. The generated dialog keeps stable class hooks for global styling.
           </p>
           <p class="text-sm leading-6 text-muted-foreground">
-            <code>ng-template[ngxImageGalleryLightbox]</code> replaces default controls while
-            preserving image layout, focus management, gestures, and progressive loading.
+            <code>ng-template[ngxImageGalleryLightbox]</code> customizes controls, while
+            <code>ng-template[ngxImageGalleryItemContent]</code> renders custom slide content.
           </p>
           <p class="text-sm leading-6 text-muted-foreground">
-            <code>ngx-image-gallery/router</code> adds opt-in query-param synchronization without
+            <code>ngx-image-gallery/router</code> adds opt-in close-on-navigation behavior without
             making Router a primary runtime requirement.
           </p>
         </div>

@@ -1,7 +1,50 @@
+import {
+  Component,
+  OnDestroy,
+  TemplateRef,
+  ViewChild,
+  ViewContainerRef,
+  inject,
+} from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import axe from 'axe-core';
 import { NgxImageGalleryService } from './ngx-image-gallery.service';
-import { provideNgxImageGallery } from './gallery-types';
+import {
+  provideNgxImageGallery,
+  type NgxImageGalleryItem,
+  type NgxImageGalleryItemContentContext,
+} from './gallery-types';
+
+let destroyedCustomContentCount = 0;
+
+@Component({
+  selector: 'app-custom-content-destroy-marker',
+  template: '<span id="custom-destroy-marker">custom marker</span>',
+})
+class CustomContentDestroyMarker implements OnDestroy {
+  ngOnDestroy(): void {
+    destroyedCustomContentCount += 1;
+  }
+}
+
+@Component({
+  imports: [CustomContentDestroyMarker],
+  template: `
+    <ng-template #content let-item let-index="index" let-gallery="gallery">
+      <app-custom-content-destroy-marker />
+      <button id="custom-content-button" type="button" (click)="gallery.next()">
+        {{ item.alt }} {{ index }}
+      </button>
+      <input id="custom-content-input" />
+    </ng-template>
+  `,
+})
+class ServiceItemContentHostComponent {
+  readonly viewContainerRef = inject(ViewContainerRef);
+
+  @ViewChild('content', { static: true })
+  content!: TemplateRef<NgxImageGalleryItemContentContext>;
+}
 
 class FakeImage {
   static requests: string[] = [];
@@ -61,6 +104,7 @@ describe('NgxImageGalleryService', () => {
     FakeImage.naturalWidthValue = 2400;
     FakeImage.naturalHeightValue = 1200;
     FakeImage.shouldError = false;
+    destroyedCustomContentCount = 0;
     originalAnimationFrame = window.requestAnimationFrame;
     window.requestAnimationFrame = (callback: FrameRequestCallback): number => {
       callback(0);
@@ -263,6 +307,133 @@ describe('NgxImageGalleryService', () => {
 
     expect(service.activeIndex()).toBe(1);
     expect(FakeImage.requests).toEqual(['full-1.jpg', 'full-2.jpg']);
+  });
+
+  it('renders custom item content without loading an image for that slide', () => {
+    const fixture = TestBed.createComponent(ServiceItemContentHostComponent);
+    fixture.detectChanges();
+    const items: NgxImageGalleryItem[] = [
+      { thumbSrc: 'custom-thumb.jpg', alt: 'Custom card', data: { kind: 'card' } },
+      { fullSrc: 'full-2.jpg', thumbSrc: 'thumb-2.jpg', alt: 'Second image' },
+    ];
+
+    service.open(items, 0, {
+      itemContentTemplates: [
+        {
+          templateRef: fixture.componentInstance.content,
+          viewContainerRef: fixture.componentInstance.viewContainerRef,
+        },
+      ],
+    });
+    vi.advanceTimersByTime(333);
+
+    expect(document.querySelector('#custom-content-button')?.textContent?.trim()).toBe(
+      'Custom card 0',
+    );
+    expect(FakeImage.requests).toEqual([]);
+    expect(document.querySelector('.ngx-image-gallery-loading')?.getAttribute('aria-hidden')).toBe(
+      'true',
+    );
+    expect(document.querySelector('.ngx-image-gallery-error')?.getAttribute('aria-hidden')).toBe(
+      'true',
+    );
+
+    document.querySelector<HTMLButtonElement>('#custom-content-button')?.click();
+    vi.advanceTimersByTime(220);
+
+    expect(service.activeIndex()).toBe(1);
+    expect(FakeImage.requests).toEqual(['full-2.jpg']);
+  });
+
+  it('destroys custom item content views when slides rerender and when the lightbox closes', () => {
+    const fixture = TestBed.createComponent(ServiceItemContentHostComponent);
+    fixture.detectChanges();
+    const items: NgxImageGalleryItem[] = [
+      { thumbSrc: 'custom-thumb-1.jpg', alt: 'First custom card' },
+      { thumbSrc: 'custom-thumb-2.jpg', alt: 'Second custom card' },
+    ];
+    const itemContentTemplate = {
+      templateRef: fixture.componentInstance.content,
+      viewContainerRef: fixture.componentInstance.viewContainerRef,
+    };
+    const itemContentTemplates = [itemContentTemplate, itemContentTemplate];
+
+    service.open(items, 0, { itemContentTemplates });
+    vi.advanceTimersByTime(333);
+
+    expect(document.querySelectorAll('#custom-destroy-marker')).toHaveLength(3);
+
+    service.next();
+    vi.advanceTimersByTime(220);
+
+    expect(destroyedCustomContentCount).toBe(3);
+
+    service.close(false);
+
+    expect(destroyedCustomContentCount).toBe(6);
+  });
+
+  it('includes custom item content controls in focus trapping without hijacking editable keys', () => {
+    const fixture = TestBed.createComponent(ServiceItemContentHostComponent);
+    fixture.detectChanges();
+
+    service.open([{ thumbSrc: 'custom-thumb.jpg', alt: 'Custom card' }], 0, {
+      itemContentTemplates: [
+        {
+          templateRef: fixture.componentInstance.content,
+          viewContainerRef: fixture.componentInstance.viewContainerRef,
+        },
+      ],
+    });
+    vi.advanceTimersByTime(333);
+
+    const button = document.querySelector<HTMLButtonElement>('#custom-content-button');
+    const input = document.querySelector<HTMLInputElement>('#custom-content-input');
+    button?.focus();
+
+    document.dispatchEvent(createKeyboardEvent('Tab'));
+
+    expect(document.activeElement).toBe(input);
+
+    const keydown = createKeyboardEvent('ArrowRight');
+    input?.dispatchEvent(keydown);
+    vi.advanceTimersByTime(220);
+
+    expect(keydown.defaultPrevented).toBe(false);
+    expect(service.activeIndex()).toBe(0);
+  });
+
+  it('does not capture pointer gestures that start inside custom item content', () => {
+    const fixture = TestBed.createComponent(ServiceItemContentHostComponent);
+    fixture.detectChanges();
+
+    service.open([{ thumbSrc: 'custom-thumb.jpg', alt: 'Custom card' }], 0, {
+      itemContentTemplates: [
+        {
+          templateRef: fixture.componentInstance.content,
+          viewContainerRef: fixture.componentInstance.viewContainerRef,
+        },
+      ],
+    });
+    vi.advanceTimersByTime(333);
+
+    const stage = getStage();
+    const content = document.querySelector<HTMLElement>('.ngx-image-gallery-content');
+    stage.setPointerCapture = vi.fn();
+
+    content?.dispatchEvent(
+      createPointerEvent('pointerdown', { pointerId: 1, clientX: 120, clientY: 160 }),
+    );
+    const pointerMove = createPointerEvent('pointermove', {
+      pointerId: 1,
+      clientX: 220,
+      clientY: 160,
+    });
+    const wasNotPrevented = content?.dispatchEvent(pointerMove);
+
+    expect(stage.setPointerCapture).not.toHaveBeenCalled();
+    expect(wasNotPrevented).toBe(true);
+    expect(pointerMove.defaultPrevented).toBe(false);
   });
 
   it('updates public state and removes the overlay on close', () => {

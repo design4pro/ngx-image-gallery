@@ -77,6 +77,7 @@ export class NgxImageGalleryDirective implements OnDestroy {
         ...this.getLightboxOptions(),
         originElement: itemDirectives[index]?.originElement ?? this.elementRef.nativeElement,
         originElements: itemDirectives.map((item) => item.originElement),
+        itemContentTemplates: itemDirectives.map((item) => item.itemContentTemplate),
       },
       this.owner,
     );
@@ -98,6 +99,9 @@ export class NgxImageGalleryDirective implements OnDestroy {
         ...this.getLightboxOptions(),
         originElement: item.originElement,
         originElements: itemDirectives.map((registeredItem) => registeredItem.originElement),
+        itemContentTemplates: itemDirectives.map(
+          (registeredItem) => registeredItem.itemContentTemplate,
+        ),
       },
       this.owner,
     );

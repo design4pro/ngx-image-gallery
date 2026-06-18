@@ -31,6 +31,8 @@ import {
   NGX_IMAGE_GALLERY_OPTIONS,
   type NgxImageGalleryClassValue,
   type NgxImageGalleryItem,
+  type NgxImageGalleryItemContentContext,
+  type NgxImageGalleryItemContentTemplate,
   type NgxImageGalleryLightboxContext,
   type NgxImageGalleryOpenOptions,
   type NgxImageGalleryOptionsInput,
@@ -42,7 +44,7 @@ import { BrowserImageLoader, type ImageLoader, type LoadedImage } from './image-
 interface RenderedSlideElements {
   slide: HTMLDivElement;
   media: HTMLDivElement;
-  thumbImage: HTMLImageElement;
+  thumbImage: HTMLImageElement | null;
   fullImage: HTMLImageElement | null;
 }
 
@@ -50,6 +52,7 @@ interface SlideRuntime {
   item: NgxImageGalleryItem;
   index: number;
   originElement?: HTMLElement;
+  contentTemplate?: NgxImageGalleryItemContentTemplate;
   dimensions: ResolvedDimensions;
   thumbSrc: string;
   fitted: GalleryRect;
@@ -121,6 +124,7 @@ interface GalleryRuntime {
   openTimer: number | null;
   mediaFrame: number | null;
   customLightbox: CustomLightboxRuntime | null;
+  itemContentViewRefs: Array<EmbeddedViewRef<NgxImageGalleryItemContentContext>>;
 }
 
 const ANIMATION_DURATION_MS = 333;
@@ -175,12 +179,14 @@ export class NgxImageGalleryService {
       const mergedOptions = this.mergeOptions(options);
       const activeIndex = this.normalizeOpenIndex(index, galleryItems.length);
       const originElements = options.originElements ?? [];
+      const itemContentTemplates = options.itemContentTemplates ?? [];
       const slides = galleryItems.map((item, slideIndex) =>
         this.createSlideRuntime(
           item,
           slideIndex,
           originElements[slideIndex] ??
             (slideIndex === activeIndex ? options.originElement : undefined),
+          itemContentTemplates[slideIndex],
           mergedOptions,
         ),
       );
@@ -204,6 +210,7 @@ export class NgxImageGalleryService {
         openTimer: null,
         mediaFrame: null,
         customLightbox: null,
+        itemContentViewRefs: [],
       };
       runtime.customLightbox = this.createCustomLightbox(runtime, options);
 
@@ -321,6 +328,7 @@ export class NgxImageGalleryService {
     item: NgxImageGalleryItem,
     index: number,
     originElement: HTMLElement | undefined,
+    contentTemplate: NgxImageGalleryItemContentTemplate | undefined,
     options: NgxImageGalleryOptions,
   ): SlideRuntime {
     const dimensions = resolveImageDimensions(item, originElement, options.provisionalLongEdge);
@@ -330,6 +338,7 @@ export class NgxImageGalleryService {
       item,
       index,
       originElement,
+      contentTemplate,
       dimensions,
       thumbSrc: this.resolveSafeImageSource(getImageSource(item, originElement)) ?? '',
       fitted,
@@ -628,6 +637,10 @@ export class NgxImageGalleryService {
       }
     });
     this.listen(runtime, runtime.elements.stage, 'dblclick', (event) => {
+      if (this.getActiveSlide(runtime)?.contentTemplate) {
+        return;
+      }
+
       event.preventDefault();
       this.toggleZoom(event.clientX, event.clientY);
     });
@@ -697,6 +710,7 @@ export class NgxImageGalleryService {
   }
 
   private renderVisibleSlides(runtime: GalleryRuntime): void {
+    this.destroyRenderedSlides(runtime);
     runtime.elements.track.textContent = '';
     runtime.elements.track.style.transition = '';
     runtime.elements.track.style.transform = 'translate3d(0, 0, 0)';
@@ -728,6 +742,22 @@ export class NgxImageGalleryService {
 
     const media = this.document.createElement('div');
     media.className = 'ngx-image-gallery-media';
+
+    if (slide.contentTemplate) {
+      media.classList.add('ngx-image-gallery-media-custom');
+      this.createItemContentView(runtime, slide, media);
+      slide.elements = {
+        slide: slideElement,
+        media,
+        thumbImage: null,
+        fullImage: null,
+      };
+
+      slideElement.appendChild(media);
+      runtime.elements.track.appendChild(slideElement);
+      this.applyMediaLayout(slide, runtime, 'instant');
+      return;
+    }
 
     const thumbImage = this.document.createElement('img');
     thumbImage.className = 'ngx-image-gallery-image ngx-image-gallery-thumb';
@@ -788,6 +818,40 @@ export class NgxImageGalleryService {
       image.src = safeSrc;
     }
     return image;
+  }
+
+  private createItemContentView(
+    runtime: GalleryRuntime,
+    slide: SlideRuntime,
+    media: HTMLDivElement,
+  ): void {
+    if (!slide.contentTemplate) {
+      return;
+    }
+
+    const context: NgxImageGalleryItemContentContext = {
+      $implicit: slide.item,
+      item: slide.item,
+      index: slide.index,
+      count: runtime.items.length,
+      active: slide.index === runtime.activeIndex,
+      gallery: this.createLightboxContext(runtime),
+    };
+    const viewRef = slide.contentTemplate.viewContainerRef.createEmbeddedView(
+      slide.contentTemplate.templateRef,
+      context,
+    );
+    viewRef.detectChanges();
+    runtime.itemContentViewRefs.push(viewRef);
+
+    const content = this.document.createElement('div');
+    content.className = 'ngx-image-gallery-content';
+    viewRef.rootNodes.forEach((node: unknown) => {
+      if (node instanceof Node) {
+        content.appendChild(node);
+      }
+    });
+    media.appendChild(content);
   }
 
   private startOpeningAnimation(runtime: GalleryRuntime): void {
@@ -903,7 +967,9 @@ export class NgxImageGalleryService {
     }
 
     slide.elements.media.classList.add('ngx-image-gallery-origin-crop');
-    slide.elements.thumbImage.style.objectPosition = originCrop.objectPosition;
+    if (slide.elements.thumbImage) {
+      slide.elements.thumbImage.style.objectPosition = originCrop.objectPosition;
+    }
     if (slide.elements.fullImage) {
       slide.elements.fullImage.style.objectPosition = originCrop.objectPosition;
     }
@@ -915,7 +981,9 @@ export class NgxImageGalleryService {
     }
 
     slide.elements.media.classList.remove('ngx-image-gallery-origin-crop');
-    slide.elements.thumbImage.style.objectPosition = '';
+    if (slide.elements.thumbImage) {
+      slide.elements.thumbImage.style.objectPosition = '';
+    }
     if (slide.elements.fullImage) {
       slide.elements.fullImage.style.objectPosition = '';
     }
@@ -977,6 +1045,13 @@ export class NgxImageGalleryService {
 
   private loadActiveFullImage(runtime: GalleryRuntime): void {
     const slide = this.getActiveSlide(runtime);
+    if (slide?.contentTemplate) {
+      slide.fullLoading = false;
+      slide.fullError = false;
+      this.updateUi(runtime);
+      return;
+    }
+
     if (!slide || slide.fullLoaded || slide.fullLoading || slide.fullError) {
       this.updateUi(runtime);
       return;
@@ -1150,7 +1225,7 @@ export class NgxImageGalleryService {
       '[contenteditable]:not([contenteditable="false"])',
     ].join(',');
 
-    return Array.from(runtime.elements.ui.querySelectorAll<HTMLElement>(selectors)).filter(
+    return Array.from(runtime.elements.overlay.querySelectorAll<HTMLElement>(selectors)).filter(
       (element) => element.closest('[hidden], [aria-hidden="true"]') === null,
     );
   }
@@ -1166,9 +1241,18 @@ export class NgxImageGalleryService {
     );
   }
 
+  private isCustomContentTarget(event: Event): boolean {
+    const target = event.target;
+    return target instanceof Element && target.closest('.ngx-image-gallery-content') !== null;
+  }
+
   private onPointerDown(event: PointerEvent): void {
     const runtime = this.runtime;
     if (!runtime || runtime.isOpening || runtime.isClosing) {
+      return;
+    }
+
+    if (this.isCustomContentTarget(event)) {
       return;
     }
 
@@ -1176,6 +1260,20 @@ export class NgxImageGalleryService {
     runtime.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
     const activeSlide = this.getActiveSlide(runtime);
     if (!activeSlide) {
+      return;
+    }
+
+    if (activeSlide.contentTemplate) {
+      runtime.gesture = {
+        mode: 'swipe',
+        startX: event.clientX,
+        startY: event.clientY,
+        lastX: event.clientX,
+        startPan: { ...activeSlide.pan },
+        startZoomScale: activeSlide.zoomScale,
+        startDistance: 0,
+        startCenter: { x: event.clientX, y: event.clientY },
+      };
       return;
     }
 
@@ -1380,7 +1478,14 @@ export class NgxImageGalleryService {
   private onWheel(event: WheelEvent): void {
     const runtime = this.runtime;
     const activeSlide = runtime ? this.getActiveSlide(runtime) : null;
-    if (!runtime || !activeSlide || runtime.isOpening || runtime.isClosing || event.deltaY === 0) {
+    if (
+      !runtime ||
+      !activeSlide ||
+      activeSlide.contentTemplate ||
+      runtime.isOpening ||
+      runtime.isClosing ||
+      event.deltaY === 0
+    ) {
       return;
     }
 
@@ -1434,7 +1539,7 @@ export class NgxImageGalleryService {
 
   private zoomByKeyboard(runtime: GalleryRuntime, factor: number): void {
     const activeSlide = this.getActiveSlide(runtime);
-    if (!activeSlide || runtime.isOpening || runtime.isClosing) {
+    if (!activeSlide || activeSlide.contentTemplate || runtime.isOpening || runtime.isClosing) {
       return;
     }
 
@@ -1457,7 +1562,7 @@ export class NgxImageGalleryService {
 
   private resetZoomByKeyboard(runtime: GalleryRuntime): void {
     const activeSlide = this.getActiveSlide(runtime);
-    if (!activeSlide || runtime.isOpening || runtime.isClosing) {
+    if (!activeSlide || activeSlide.contentTemplate || runtime.isOpening || runtime.isClosing) {
       return;
     }
 
@@ -1615,6 +1720,14 @@ export class NgxImageGalleryService {
     });
   }
 
+  private destroyRenderedSlides(runtime: GalleryRuntime): void {
+    runtime.itemContentViewRefs.forEach((viewRef) => viewRef.destroy());
+    runtime.itemContentViewRefs = [];
+    runtime.slides.forEach((slide) => {
+      slide.elements = null;
+    });
+  }
+
   private destroyRuntime(runtime: GalleryRuntime): void {
     if (this.runtime !== runtime) {
       return;
@@ -1626,6 +1739,7 @@ export class NgxImageGalleryService {
     }
     runtime.cleanup.forEach((cleanup) => cleanup());
     runtime.cleanup = [];
+    this.destroyRenderedSlides(runtime);
     runtime.customLightbox?.viewRef.destroy();
     runtime.customLightbox = null;
     runtime.elements.overlay.remove();

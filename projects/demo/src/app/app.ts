@@ -25,4 +25,5 @@ export class App {
   protected readonly title = signal('ngx-image-gallery');
   protected readonly primaryNav = primaryNav;
   protected readonly repoUrl = 'https://github.com/design4pro/ngx-image-gallery';
+  protected readonly brandUrl = 'https://design4.pro/';
 }
