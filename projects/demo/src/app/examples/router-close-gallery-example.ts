@@ -6,11 +6,11 @@ import {
   NgxImageGalleryDirective,
   NgxImageGalleryItemDirective,
   type NgxImageGalleryOpenOptions,
-} from 'ngx-image-gallery';
+} from '@design4pro/ngx-image-gallery';
 import {
   NgxImageGalleryCloseOnNavigationDirective,
   type NgxImageGalleryCloseOnNavigationOptions,
-} from 'ngx-image-gallery/router';
+} from '@design4pro/ngx-image-gallery/router';
 import { DEMO_PHOTOS } from './demo-photos';
 
 @Component({

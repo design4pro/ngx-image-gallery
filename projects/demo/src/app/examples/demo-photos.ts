@@ -1,4 +1,4 @@
-import type { NgxImageGalleryItem } from 'ngx-image-gallery';
+import type { NgxImageGalleryItem } from '@design4pro/ngx-image-gallery';
 
 export const DEMO_PHOTOS: NgxImageGalleryItem[] = [
   {

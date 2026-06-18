@@ -5,8 +5,8 @@
   "compilerOptions": {
     "outDir": "../../out-tsc/spec",
     "paths": {
-      "ngx-image-gallery": ["./src/public-api.ts"],
-      "ngx-image-gallery/router": ["./router/public-api.ts"]
+      "@design4pro/ngx-image-gallery": ["./src/public-api.ts"],
+      "@design4pro/ngx-image-gallery/router": ["./router/public-api.ts"]
     },
     "types": ["vitest/globals"]
   },

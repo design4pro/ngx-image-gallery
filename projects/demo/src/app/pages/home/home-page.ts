@@ -10,7 +10,7 @@ import {
   NgxImageGalleryDirective,
   NgxImageGalleryItemDirective,
   type NgxImageGalleryOpenOptions,
-} from 'ngx-image-gallery';
+} from '@design4pro/ngx-image-gallery';
 import { DEMO_PHOTOS } from '../../examples/demo-photos';
 import { CodeBlock } from '../../shared/code-block/code-block';
 import { exampleCards } from '../../shared/docsite/docsite-data';
@@ -154,7 +154,7 @@ import { exampleCards } from '../../shared/docsite/docsite-data';
             <code>ng-template[ngxImageGalleryItemContent]</code> renders custom slide content.
           </p>
           <p class="text-sm leading-6 text-muted-foreground">
-            <code>ngx-image-gallery/router</code> adds opt-in close-on-navigation behavior without
+            <code>@design4pro/ngx-image-gallery/router</code> adds opt-in router behavior without
             making Router a primary runtime requirement.
           </p>
         </div>

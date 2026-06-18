@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import axe from 'axe-core';
-import { NgxImageGalleryService } from 'ngx-image-gallery';
+import { NgxImageGalleryService } from '@design4pro/ngx-image-gallery';
 import { TailwindGalleryExample } from './tailwind-gallery-example';
 
 describe('TailwindGalleryExample', () => {

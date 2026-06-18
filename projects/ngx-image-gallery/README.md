@@ -12,7 +12,7 @@ Native Angular image gallery with a PhotoSwipe-like lightbox experience, progres
 - Optional custom lightbox template with state and command context.
 - Optional per-item custom Angular content rendered instead of a generated image.
 - Optional lightbox thumbnail strip.
-- Optional router-close behavior through the `ngx-image-gallery/router` secondary entrypoint.
+- Optional router-close behavior through the `@design4pro/ngx-image-gallery/router` secondary entrypoint.
 - Smooth opening animation from the clicked thumbnail.
 - No required original image dimensions.
 - Provisional sizing from the thumbnail, followed by recalculation from `naturalWidth` and `naturalHeight` after the original image loads.
@@ -22,16 +22,16 @@ Native Angular image gallery with a PhotoSwipe-like lightbox experience, progres
 ## Install
 
 ```bash
-npm install ngx-image-gallery
+npm install @design4pro/ngx-image-gallery
 ```
 
-`ngx-image-gallery` is intended only for Angular applications. The default lightbox DOM and gestures are implemented by the library; consumers style them with CSS custom properties, configured classes, or an Angular template.
+`@design4pro/ngx-image-gallery` is intended only for Angular applications. The default lightbox DOM and gestures are implemented by the library; consumers style them with CSS custom properties, configured classes, or an Angular template.
 
 ## Provide defaults
 
 ```ts
 import { ApplicationConfig } from '@angular/core';
-import { provideNgxImageGallery } from 'ngx-image-gallery';
+import { provideNgxImageGallery } from '@design4pro/ngx-image-gallery';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -248,10 +248,10 @@ interface NgxImageGalleryItemContentContext {
 
 ## Router close
 
-Import `NgxImageGalleryCloseOnNavigationDirective` from `ngx-image-gallery/router` when a gallery-owned lightbox should close as Angular Router navigation starts. The primary entrypoint does not require Angular Router.
+Import `NgxImageGalleryCloseOnNavigationDirective` from `@design4pro/ngx-image-gallery/router` when a gallery-owned lightbox should close as Angular Router navigation starts. The primary entrypoint does not require Angular Router.
 
 ```ts
-import { NgxImageGalleryCloseOnNavigationDirective } from 'ngx-image-gallery/router';
+import { NgxImageGalleryCloseOnNavigationDirective } from '@design4pro/ngx-image-gallery/router';
 ```
 
 ```html

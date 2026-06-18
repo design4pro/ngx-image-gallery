@@ -5,7 +5,7 @@ import {
   NgxImageGalleryItemDirective,
   type NgxImageGalleryItem,
   type NgxImageGalleryOpenOptions,
-} from 'ngx-image-gallery';
+} from '@design4pro/ngx-image-gallery';
 
 interface GalleryInsight {
   eyebrow: string;

@@ -1,6 +1,9 @@
 {
-  "name": "ngx-image-gallery",
+  "name": "@design4pro/ngx-image-gallery",
   "version": "0.0.1",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "license": "MIT",
   "peerDependencies": {
     "@angular/common": ">=20.0.0 <23.0.0",
