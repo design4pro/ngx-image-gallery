@@ -223,6 +223,8 @@ interface NgxImageGalleryLightboxContext {
 
 Use `ng-template[ngxImageGalleryItemContent]` inside an item directive to render Angular content for that slide instead of the generated image. Custom content keeps dialog behavior, focus trapping, navigation, and lifecycle cleanup. Image loading, image error state, and zoom are skipped for custom content slides.
 
+The lightbox renders the previous, current, and next slides. Because `loop` defaults to `true`, a two-item gallery can instantiate the same item content template more than once at the same time. Keep custom item content free of globally unique DOM `id` values and side effects that assume only one active template instance.
+
 ```html
 <button type="button" [ngxImageGalleryItem]="insightItem">
   Open insight

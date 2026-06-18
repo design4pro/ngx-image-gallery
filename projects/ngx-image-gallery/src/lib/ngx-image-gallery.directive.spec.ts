@@ -96,6 +96,7 @@ describe('ngxImageGallery directives', () => {
   let originalAnimationFrame: typeof window.requestAnimationFrame;
 
   beforeEach(async () => {
+    vi.useFakeTimers();
     originalAnimationFrame = window.requestAnimationFrame;
     window.requestAnimationFrame = (callback: FrameRequestCallback): number => {
       callback(0);
@@ -115,6 +116,7 @@ describe('ngxImageGallery directives', () => {
     service.close(false);
     window.requestAnimationFrame = originalAnimationFrame;
     document.body.innerHTML = '';
+    vi.useRealTimers();
   });
 
   it('opens the gallery from the clicked registered item', () => {
@@ -141,7 +143,7 @@ describe('ngxImageGallery directives', () => {
     expect(defaultUi?.hasAttribute('hidden')).toBe(true);
   });
 
-  it('renders per-item custom content with item and gallery context', async () => {
+  it('renders per-item custom content with item and gallery context', () => {
     const customFixture = TestBed.createComponent(ItemContentHostComponent);
     customFixture.detectChanges();
     const item = customFixture.nativeElement.querySelector('#custom-item') as HTMLButtonElement;
@@ -158,7 +160,7 @@ describe('ngxImageGallery directives', () => {
     expect(content?.getAttribute('data-active')).toBe('true');
 
     close?.click();
-    await new Promise((resolve) => window.setTimeout(resolve, 350));
+    vi.advanceTimersByTime(350);
 
     expect(service.isOpen()).toBe(false);
   });
