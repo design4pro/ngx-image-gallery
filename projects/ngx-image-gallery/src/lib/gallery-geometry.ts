@@ -45,7 +45,7 @@ export function getImageSource(item: NgxImageGalleryItem, originElement?: HTMLEl
   }
 
   const image = findImageElement(originElement);
-  return image?.currentSrc || image?.src || item.fullSrc;
+  return image?.currentSrc || image?.src || item.fullSrc || '';
 }
 
 export function findImageElement(originElement?: HTMLElement): HTMLImageElement | null {

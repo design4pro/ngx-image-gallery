@@ -10,6 +10,7 @@ Native Angular image gallery with a PhotoSwipe-like lightbox experience, progres
 - Optional configured classes for generated lightbox elements.
 - Configurable accessible labels for generated lightbox text.
 - Optional custom lightbox template with state and command context.
+- Optional per-item custom Angular content rendered instead of a generated image.
 - Optional lightbox thumbnail strip.
 - Optional router-close behavior through the `ngx-image-gallery/router` secondary entrypoint.
 - Smooth opening animation from the clicked thumbnail.
@@ -218,6 +219,33 @@ interface NgxImageGalleryLightboxContext {
 }
 ```
 
+## Custom item content
+
+Use `ng-template[ngxImageGalleryItemContent]` inside an item directive to render Angular content for that slide instead of the generated image. Custom content keeps dialog behavior, focus trapping, navigation, and lifecycle cleanup. Image loading, image error state, and zoom are skipped for custom content slides.
+
+```html
+<button type="button" [ngxImageGalleryItem]="insightItem">
+  Open insight
+
+  <ng-template ngxImageGalleryItemContent let-item let-gallery="gallery">
+    <app-insight-panel [insight]="item.data" (closed)="gallery.close()" />
+  </ng-template>
+</button>
+```
+
+Item content template context:
+
+```ts
+interface NgxImageGalleryItemContentContext {
+  $implicit: NgxImageGalleryItem;
+  item: NgxImageGalleryItem;
+  index: number;
+  count: number;
+  active: boolean;
+  gallery: NgxImageGalleryLightboxContext;
+}
+```
+
 ## Router close
 
 Import `NgxImageGalleryCloseOnNavigationDirective` from `ngx-image-gallery/router` when a gallery-owned lightbox should close as Angular Router navigation starts. The primary entrypoint does not require Angular Router.
@@ -257,7 +285,7 @@ Router close does not write query params and does not open slides from the URL. 
 
 ```ts
 export interface NgxImageGalleryItem {
-  fullSrc: string;
+  fullSrc?: string;
   thumbSrc?: string;
   alt?: string;
   srcset?: string;
@@ -270,11 +298,11 @@ export interface NgxImageGalleryItem {
 }
 ```
 
-`alt` should describe the image content for users who cannot inspect the image visually. Use an empty string only for decorative images. `width` and `height` are optional. If they are omitted, the gallery uses the rendered or natural thumbnail ratio and a provisional long edge until the original image finishes loading.
+`fullSrc` is required for image slides. It may be omitted only when the item has `ng-template[ngxImageGalleryItemContent]`. `alt` should describe the image or custom content for users who cannot inspect it visually. Use an empty string only for decorative images. `width` and `height` are optional. If they are omitted, the gallery uses the rendered or natural thumbnail ratio and a provisional long edge until the original image finishes loading.
 
 ## Image URL boundary
 
-`fullSrc`, `thumbSrc`, and `srcset` are application-owned image sources. Do not pass unsanitized user input into gallery items.
+`fullSrc`, `thumbSrc`, and `srcset` are application-owned image sources. Do not pass unsanitized user input into image gallery items.
 
 The generated image elements assign only relative URLs, HTTP(S) URLs, blob URLs, and common raster `data:image` URLs for single image sources. Unsafe schemes are ignored. For `srcset`, use relative, HTTP(S), or blob candidates; if the list contains an unsafe candidate, the library drops the whole `srcset` value.
 

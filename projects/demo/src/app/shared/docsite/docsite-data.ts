@@ -55,6 +55,12 @@ export const exampleCards: ExampleCard[] = [
     image: 'https://picsum.photos/id/1043/960/720',
   },
   {
+    title: 'Custom content',
+    description: 'Render Angular components in lightbox slides without full image sources.',
+    path: '/examples/custom-content',
+    image: 'https://picsum.photos/id/1067/960/720',
+  },
+  {
     title: 'Router close',
     description: 'Close an open lightbox when the application route changes.',
     path: '/examples/router-close',
@@ -122,8 +128,9 @@ export const optionGroups: Array<{ title: string; options: ApiOption[] }> = [
       {
         name: 'fullSrc',
         type: 'string',
-        defaultValue: 'required',
-        description: 'Application-owned original image URL used inside the lightbox.',
+        defaultValue: 'required for image slides',
+        description:
+          'Application-owned original image URL. Omit only when the item provides ngxImageGalleryItemContent.',
       },
       {
         name: 'thumbSrc',
@@ -306,7 +313,7 @@ export const appConfig: ApplicationConfig = {
       },
       {
         title: 'Item data',
-        body: 'Only fullSrc is required. Dimensions, srcset, and stable ids can be added when your app has them.',
+        body: 'Image slides require fullSrc. Items that provide ngxImageGalleryItemContent may omit fullSrc and render application data instead.',
         code: {
           language: 'ts',
           code: `import type { NgxImageGalleryItem } from 'ngx-image-gallery';
@@ -375,7 +382,7 @@ export const photos: NgxImageGalleryItem[] = [
   {
     slug: 'custom-lightbox',
     title: 'Custom lightbox',
-    description: 'Replace the controls while keeping dialog behavior, gestures, and loading.',
+    description: 'Replace controls or render custom Angular content in individual slides.',
     sections: [
       {
         title: 'Template context',
@@ -394,6 +401,23 @@ export const photos: NgxImageGalleryItem[] = [
     <button type="button" (click)="gallery.close()">Close</button>
   </ng-template>
 </div>`,
+        },
+      },
+      {
+        title: 'Custom item content',
+        body: 'Place ng-template[ngxImageGalleryItemContent] inside an item directive to render Angular content in that slide instead of the generated image. Custom content keeps dialog behavior, focus trapping, and navigation, but skips image loading, image error state, and zoom.',
+        code: {
+          language: 'html',
+          code: `<button type="button" [ngxImageGalleryItem]="insightItem">
+  Open insight
+
+  <ng-template ngxImageGalleryItemContent let-item let-gallery="gallery">
+    <app-insight-panel
+      [insight]="item.data"
+      (closed)="gallery.close()"
+    />
+  </ng-template>
+</button>`,
         },
       },
     ],

@@ -6,7 +6,7 @@ import {
 } from '@angular/core';
 
 export interface NgxImageGalleryItem {
-  fullSrc: string;
+  fullSrc?: string;
   thumbSrc?: string;
   alt?: string;
   srcset?: string;
@@ -78,6 +78,7 @@ export interface NgxImageGalleryOpenOptions extends NgxImageGalleryOptionsInput 
   originElements?: readonly (HTMLElement | undefined)[];
   lightboxTemplate?: TemplateRef<NgxImageGalleryLightboxContext>;
   lightboxViewContainer?: ViewContainerRef;
+  itemContentTemplates?: readonly (NgxImageGalleryItemContentTemplate | undefined)[];
 }
 
 export interface NgxImageGalleryState {
@@ -102,6 +103,20 @@ export interface NgxImageGalleryLightboxContext {
   previous: () => void;
   next: () => void;
   goTo: (index: number) => void;
+}
+
+export interface NgxImageGalleryItemContentTemplate {
+  templateRef: TemplateRef<NgxImageGalleryItemContentContext>;
+  viewContainerRef: ViewContainerRef;
+}
+
+export interface NgxImageGalleryItemContentContext {
+  $implicit: NgxImageGalleryItem;
+  item: NgxImageGalleryItem;
+  index: number;
+  count: number;
+  active: boolean;
+  gallery: NgxImageGalleryLightboxContext;
 }
 
 export const DEFAULT_NGX_IMAGE_GALLERY_LABELS: NgxImageGalleryLabels = {
