@@ -46,7 +46,6 @@ interface RenderedSlideElements {
   media: HTMLDivElement;
   thumbImage: HTMLImageElement | null;
   fullImage: HTMLImageElement | null;
-  contentViewRef: EmbeddedViewRef<NgxImageGalleryItemContentContext> | null;
 }
 
 interface SlideRuntime {
@@ -125,6 +124,7 @@ interface GalleryRuntime {
   openTimer: number | null;
   mediaFrame: number | null;
   customLightbox: CustomLightboxRuntime | null;
+  itemContentViewRefs: Array<EmbeddedViewRef<NgxImageGalleryItemContentContext>>;
 }
 
 const ANIMATION_DURATION_MS = 333;
@@ -210,6 +210,7 @@ export class NgxImageGalleryService {
         openTimer: null,
         mediaFrame: null,
         customLightbox: null,
+        itemContentViewRefs: [],
       };
       runtime.customLightbox = this.createCustomLightbox(runtime, options);
 
@@ -744,13 +745,12 @@ export class NgxImageGalleryService {
 
     if (slide.contentTemplate) {
       media.classList.add('ngx-image-gallery-media-custom');
-      const contentViewRef = this.createItemContentView(runtime, slide, media);
+      this.createItemContentView(runtime, slide, media);
       slide.elements = {
         slide: slideElement,
         media,
         thumbImage: null,
         fullImage: null,
-        contentViewRef,
       };
 
       slideElement.appendChild(media);
@@ -780,7 +780,6 @@ export class NgxImageGalleryService {
       media,
       thumbImage,
       fullImage,
-      contentViewRef: null,
     };
 
     slideElement.appendChild(media);
@@ -825,9 +824,9 @@ export class NgxImageGalleryService {
     runtime: GalleryRuntime,
     slide: SlideRuntime,
     media: HTMLDivElement,
-  ): EmbeddedViewRef<NgxImageGalleryItemContentContext> | null {
+  ): void {
     if (!slide.contentTemplate) {
-      return null;
+      return;
     }
 
     const context: NgxImageGalleryItemContentContext = {
@@ -843,6 +842,7 @@ export class NgxImageGalleryService {
       context,
     );
     viewRef.detectChanges();
+    runtime.itemContentViewRefs.push(viewRef);
 
     const content = this.document.createElement('div');
     content.className = 'ngx-image-gallery-content';
@@ -852,8 +852,6 @@ export class NgxImageGalleryService {
       }
     });
     media.appendChild(content);
-
-    return viewRef;
   }
 
   private startOpeningAnimation(runtime: GalleryRuntime): void {
@@ -1243,17 +1241,9 @@ export class NgxImageGalleryService {
     );
   }
 
-  private isInteractiveCustomContentTarget(event: Event): boolean {
+  private isCustomContentTarget(event: Event): boolean {
     const target = event.target;
-    if (!(target instanceof HTMLElement) || !target.closest('.ngx-image-gallery-content')) {
-      return false;
-    }
-
-    return Boolean(
-      target.closest(
-        'a[href], button, input, textarea, select, [tabindex]:not([tabindex="-1"]), [contenteditable]:not([contenteditable="false"])',
-      ),
-    );
+    return target instanceof Element && target.closest('.ngx-image-gallery-content') !== null;
   }
 
   private onPointerDown(event: PointerEvent): void {
@@ -1262,7 +1252,7 @@ export class NgxImageGalleryService {
       return;
     }
 
-    if (this.isInteractiveCustomContentTarget(event)) {
+    if (this.isCustomContentTarget(event)) {
       return;
     }
 
@@ -1731,8 +1721,9 @@ export class NgxImageGalleryService {
   }
 
   private destroyRenderedSlides(runtime: GalleryRuntime): void {
+    runtime.itemContentViewRefs.forEach((viewRef) => viewRef.destroy());
+    runtime.itemContentViewRefs = [];
     runtime.slides.forEach((slide) => {
-      slide.elements?.contentViewRef?.destroy();
       slide.elements = null;
     });
   }

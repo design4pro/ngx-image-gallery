@@ -349,26 +349,28 @@ describe('NgxImageGalleryService', () => {
     const fixture = TestBed.createComponent(ServiceItemContentHostComponent);
     fixture.detectChanges();
     const items: NgxImageGalleryItem[] = [
-      { thumbSrc: 'custom-thumb.jpg', alt: 'Custom card' },
-      { fullSrc: 'full-2.jpg', thumbSrc: 'thumb-2.jpg', alt: 'Second image' },
+      { thumbSrc: 'custom-thumb-1.jpg', alt: 'First custom card' },
+      { thumbSrc: 'custom-thumb-2.jpg', alt: 'Second custom card' },
     ];
     const itemContentTemplate = {
       templateRef: fixture.componentInstance.content,
       viewContainerRef: fixture.componentInstance.viewContainerRef,
     };
+    const itemContentTemplates = [itemContentTemplate, itemContentTemplate];
 
-    service.open(items, 0, { itemContentTemplates: [itemContentTemplate] });
+    service.open(items, 0, { itemContentTemplates });
     vi.advanceTimersByTime(333);
+
+    expect(document.querySelectorAll('#custom-destroy-marker')).toHaveLength(3);
+
     service.next();
     vi.advanceTimersByTime(220);
 
-    expect(destroyedCustomContentCount).toBeGreaterThanOrEqual(1);
+    expect(destroyedCustomContentCount).toBe(3);
 
-    service.open(items, 0, { itemContentTemplates: [itemContentTemplate] });
-    vi.advanceTimersByTime(333);
     service.close(false);
 
-    expect(destroyedCustomContentCount).toBeGreaterThanOrEqual(2);
+    expect(destroyedCustomContentCount).toBe(6);
   });
 
   it('includes custom item content controls in focus trapping without hijacking editable keys', () => {
@@ -399,6 +401,39 @@ describe('NgxImageGalleryService', () => {
 
     expect(keydown.defaultPrevented).toBe(false);
     expect(service.activeIndex()).toBe(0);
+  });
+
+  it('does not capture pointer gestures that start inside custom item content', () => {
+    const fixture = TestBed.createComponent(ServiceItemContentHostComponent);
+    fixture.detectChanges();
+
+    service.open([{ thumbSrc: 'custom-thumb.jpg', alt: 'Custom card' }], 0, {
+      itemContentTemplates: [
+        {
+          templateRef: fixture.componentInstance.content,
+          viewContainerRef: fixture.componentInstance.viewContainerRef,
+        },
+      ],
+    });
+    vi.advanceTimersByTime(333);
+
+    const stage = getStage();
+    const content = document.querySelector<HTMLElement>('.ngx-image-gallery-content');
+    stage.setPointerCapture = vi.fn();
+
+    content?.dispatchEvent(
+      createPointerEvent('pointerdown', { pointerId: 1, clientX: 120, clientY: 160 }),
+    );
+    const pointerMove = createPointerEvent('pointermove', {
+      pointerId: 1,
+      clientX: 220,
+      clientY: 160,
+    });
+    const wasNotPrevented = content?.dispatchEvent(pointerMove);
+
+    expect(stage.setPointerCapture).not.toHaveBeenCalled();
+    expect(wasNotPrevented).toBe(true);
+    expect(pointerMove.defaultPrevented).toBe(false);
   });
 
   it('updates public state and removes the overlay on close', () => {
