@@ -1,0 +1,49 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "paths": {
+      "ngx-image-gallery": ["./dist/ngx-image-gallery"],
+      "ngx-image-gallery/router": ["./dist/ngx-image-gallery/router"],
+      "@demo/ui/utils": ["./projects/demo/src/app/shared/ui/utils/src/index.ts"],
+      "@demo/ui/button": ["./projects/demo/src/app/shared/ui/button/src/index.ts"],
+      "@demo/ui/badge": ["./projects/demo/src/app/shared/ui/badge/src/index.ts"],
+      "@demo/ui/tabs": ["./projects/demo/src/app/shared/ui/tabs/src/index.ts"],
+      "@demo/ui/icon": ["./projects/demo/src/app/shared/ui/icon/src/index.ts"],
+      "@demo/ui/accordion": ["./projects/demo/src/app/shared/ui/accordion/src/index.ts"],
+      "@demo/ui/sheet": ["./projects/demo/src/app/shared/ui/sheet/src/index.ts"],
+      "@demo/ui/separator": ["./projects/demo/src/app/shared/ui/separator/src/index.ts"],
+      "@demo/ui/skeleton": ["./projects/demo/src/app/shared/ui/skeleton/src/index.ts"],
+      "@demo/ui/typography": ["./projects/demo/src/app/shared/ui/typography/src/index.ts"]
+    },
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "target": "ES2022",
+    "module": "preserve"
+  },
+  "angularCompilerOptions": {
+    "enableI18nLegacyMessageIdFormat": false,
+    "strictInjectionParameters": true,
+    "strictInputAccessModifiers": true
+  },
+  "files": [],
+  "references": [
+    {
+      "path": "./projects/ngx-image-gallery/tsconfig.lib.json"
+    },
+    {
+      "path": "./projects/ngx-image-gallery/tsconfig.spec.json"
+    },
+    {
+      "path": "./projects/demo/tsconfig.app.json"
+    },
+    {
+      "path": "./projects/demo/tsconfig.spec.json"
+    }
+  ]
+}

@@ -1,0 +1,68 @@
+<div class="min-h-screen bg-background text-foreground">
+  <header
+    class="sticky top-0 z-40 border-b border-border/80 bg-background/92 backdrop-blur supports-[backdrop-filter]:bg-background/72"
+  >
+    <div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+      <a routerLink="/" class="flex items-center gap-3" aria-label="ngx-image-gallery home">
+        <span
+          class="grid size-8 place-items-center rounded-md bg-zinc-950 text-sm font-semibold text-white"
+        >
+          ngx
+        </span>
+        <span class="hidden text-sm font-semibold tracking-tight sm:inline">{{ title() }}</span>
+      </a>
+
+      <nav class="gallery-nav hidden items-center gap-1 md:flex" aria-label="Primary navigation">
+        @for (item of primaryNav; track item.path) {
+          <a
+            hlmBtn
+            variant="ghost"
+            size="sm"
+            [routerLink]="item.path"
+            routerLinkActive="bg-muted text-foreground"
+          >
+            {{ item.label }}
+          </a>
+        }
+      </nav>
+
+      <div class="hidden items-center gap-2 md:flex">
+        <a hlmBtn variant="outline" size="sm" [href]="repoUrl" target="_blank" rel="noreferrer">
+          <ng-icon hlm size="sm" name="lucideGithub" />
+          GitHub
+        </a>
+        <a hlmBtn size="sm" routerLink="/docs/installation">
+          Start
+          <ng-icon hlm size="sm" name="lucideArrowRight" />
+        </a>
+      </div>
+
+      <div class="md:hidden">
+        @defer (on immediate) {
+          <app-mobile-nav />
+        } @placeholder {
+          <span class="block size-8 rounded-md border border-border bg-background"></span>
+        }
+      </div>
+    </div>
+  </header>
+
+  <main class="app-page-shell">
+    <router-outlet />
+  </main>
+
+  <footer class="border-t border-border bg-zinc-50/60">
+    <div
+      class="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-8 text-sm text-muted-foreground sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8"
+    >
+      <p>Directive-only Angular gallery. Styling stays in the consuming app.</p>
+      <div class="flex flex-wrap gap-2">
+        <a hlmBtn variant="ghost" size="sm" routerLink="/docs/styling">Styling</a>
+        <a hlmBtn variant="ghost" size="sm" routerLink="/docs/router-close">Router close</a>
+        <a hlmBtn variant="ghost" size="sm" [href]="repoUrl" target="_blank" rel="noreferrer">
+          GitHub
+        </a>
+      </div>
+    </div>
+  </footer>
+</div>
