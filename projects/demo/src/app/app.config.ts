@@ -1,6 +1,6 @@
 import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { provideRouter, withViewTransitions } from '@angular/router';
-import { provideNgxImageGallery } from 'ngx-image-gallery';
+import { provideNgxImageGallery } from '@design4pro/ngx-image-gallery';
 import { routes } from './app.routes';
 
 export const appConfig: ApplicationConfig = {

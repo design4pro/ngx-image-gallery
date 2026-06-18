@@ -2,7 +2,7 @@ import { Directive, computed, inject, input } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationStart, Router } from '@angular/router';
 import { filter } from 'rxjs';
-import { NgxImageGalleryDirective } from 'ngx-image-gallery';
+import { NgxImageGalleryDirective } from '@design4pro/ngx-image-gallery';
 
 export interface NgxImageGalleryCloseOnNavigationOptions {
   closeOnNavigation?: boolean;

@@ -3,7 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { NavigationStart, Router } from '@angular/router';
 import { Subject } from 'rxjs';
-import { NgxImageGalleryCloseOnNavigationDirective } from 'ngx-image-gallery/router';
+import { NgxImageGalleryCloseOnNavigationDirective } from '@design4pro/ngx-image-gallery/router';
 import type { NgxImageGalleryItem } from './gallery-types';
 import { NgxImageGalleryDirective } from './ngx-image-gallery.directive';
 import { NgxImageGalleryItemDirective } from './ngx-image-gallery-item.directive';

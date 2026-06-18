@@ -3,7 +3,7 @@ import {
   NgxImageGalleryDirective,
   NgxImageGalleryItemDirective,
   type NgxImageGalleryOpenOptions,
-} from 'ngx-image-gallery';
+} from '@design4pro/ngx-image-gallery';
 import { DEMO_PHOTOS } from './demo-photos';
 
 @Component({

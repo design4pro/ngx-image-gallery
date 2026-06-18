@@ -11,7 +11,7 @@ import {
   NgxImageGalleryDirective,
   NgxImageGalleryItemDirective,
   type NgxImageGalleryOpenOptions,
-} from 'ngx-image-gallery';
+} from '@design4pro/ngx-image-gallery';
 import { DEMO_PHOTOS } from '../../examples/demo-photos';
 import { CodeBlock } from '../../shared/code-block/code-block';
 import { exampleCards } from '../../shared/docsite/docsite-data';
@@ -156,8 +156,8 @@ import { exampleCards } from '../../shared/docsite/docsite-data';
             preserving image layout, focus management, gestures, and progressive loading.
           </p>
           <p class="text-sm leading-6 text-muted-foreground">
-            <code>ngx-image-gallery/router</code> adds opt-in query-param synchronization without
-            making Router a primary runtime requirement.
+            <code>@design4pro/ngx-image-gallery/router</code> adds opt-in query-param
+            synchronization without making Router a primary runtime requirement.
           </p>
         </div>
       </div>

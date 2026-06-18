@@ -259,7 +259,7 @@ export const docs: DocPage[] = [
         body: 'The runtime package is Angular-only and has no dependency on third-party UI frameworks. Tailwind, Spartan, and app design systems stay outside the library.',
         code: {
           language: 'bash',
-          code: 'npm install ngx-image-gallery',
+          code: 'npm install @design4pro/ngx-image-gallery',
         },
       },
       {
@@ -268,7 +268,7 @@ export const docs: DocPage[] = [
         code: {
           language: 'ts',
           code: `import { ApplicationConfig } from '@angular/core';
-import { provideNgxImageGallery } from 'ngx-image-gallery';
+import { provideNgxImageGallery } from '@design4pro/ngx-image-gallery';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -309,7 +309,7 @@ export const appConfig: ApplicationConfig = {
         body: 'Only fullSrc is required. Dimensions, srcset, and stable ids can be added when your app has them.',
         code: {
           language: 'ts',
-          code: `import type { NgxImageGalleryItem } from 'ngx-image-gallery';
+          code: `import type { NgxImageGalleryItem } from '@design4pro/ngx-image-gallery';
 
 export const photos: NgxImageGalleryItem[] = [
   {
@@ -469,7 +469,7 @@ export const photos: NgxImageGalleryItem[] = [
         body: 'The router integration is outside the primary entrypoint so core gallery consumers do not need Router.',
         code: {
           language: 'ts',
-          code: `import { NgxImageGalleryCloseOnNavigationDirective } from 'ngx-image-gallery/router';
+          code: `import { NgxImageGalleryCloseOnNavigationDirective } from '@design4pro/ngx-image-gallery/router';
 
 readonly closeOnNavigation = {
   closeOnNavigation: true,
