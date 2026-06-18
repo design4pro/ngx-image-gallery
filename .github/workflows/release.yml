@@ -1,0 +1,57 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          registry-url: https://npm.pkg.github.com
+          scope: '@design4pro'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check formatting
+        run: npx prettier --check .
+
+      - name: Test library
+        run: npx ng test ngx-image-gallery --watch=false
+
+      - name: Build library
+        run: npx ng build ngx-image-gallery
+
+      - name: Pack package asset
+        run: |
+          package_tarball=$(npm pack ./dist/ngx-image-gallery --silent)
+          echo "PACKAGE_TARBALL=${package_tarball}" >> "$GITHUB_ENV"
+
+      - name: Publish package
+        run: npm publish ./dist/ngx-image-gallery
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create GitHub release
+        run: |
+          gh release create "$GITHUB_REF_NAME" "$PACKAGE_TARBALL" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes \
+            --verify-tag
+        env:
+          GH_TOKEN: ${{ github.token }}
