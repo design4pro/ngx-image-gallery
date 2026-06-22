@@ -80,7 +80,7 @@ export class NgxImageGalleryAutoDirective implements AfterViewInit, OnDestroy {
       }
 
       const restore = link ? () => undefined : this.prepareStandaloneImage(image);
-      const item = this.createDiscoveredItem(activationElement, galleryItem, restore);
+      const item = this.createDiscoveredItem(activationElement, galleryItem, restore, !link);
       discoveredItems.push(item);
       usedOrigins.add(activationElement);
     }
@@ -151,6 +151,7 @@ export class NgxImageGalleryAutoDirective implements AfterViewInit, OnDestroy {
     activationElement: HTMLElement,
     galleryItem: NgxImageGalleryItem,
     restore: () => void,
+    enableKeyboardActivation: boolean,
   ): AutoDiscoveredItem {
     const item: AutoDiscoveredItem = {
       activationElement,
@@ -180,7 +181,9 @@ export class NgxImageGalleryAutoDirective implements AfterViewInit, OnDestroy {
     };
 
     activationElement.addEventListener('click', onClick);
-    activationElement.addEventListener('keydown', onKeydown);
+    if (enableKeyboardActivation) {
+      activationElement.addEventListener('keydown', onKeydown);
+    }
 
     return item;
   }
