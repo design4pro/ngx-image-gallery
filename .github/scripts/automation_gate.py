@@ -11,6 +11,7 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 try:
     import certifi  # type: ignore[import-not-found]
@@ -29,7 +30,7 @@ class GateResult:
     warnings: list[str]
 
 
-def request_json(url: str, token: str, payload: dict | None = None) -> dict:
+def request_json(url: str, token: str, payload: dict | None = None) -> Any:
     data = None if payload is None else json.dumps(payload).encode()
     request = urllib.request.Request(
         url,
@@ -47,6 +48,21 @@ def request_json(url: str, token: str, payload: dict | None = None) -> dict:
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode(errors="replace")
         raise RuntimeError(f"GitHub API request failed: {exc.code} {detail}") from exc
+
+
+def request_json_items(url: str, token: str) -> list[dict]:
+    items: list[dict] = []
+    page = 1
+    separator = "&" if "?" in url else "?"
+
+    while True:
+        batch = request_json(f"{url}{separator}per_page=100&page={page}", token)
+        if not isinstance(batch, list):
+            raise RuntimeError(f"Expected a JSON list from {url}.")
+        items.extend(batch)
+        if len(batch) < 100:
+            return items
+        page += 1
 
 
 def load_event(path: Path) -> dict:
@@ -72,8 +88,8 @@ def resolve_pr_number(event: dict) -> int:
 def collect_text(repository: str, pr_number: int, token: str) -> str:
     api_base = f"https://api.github.com/repos/{repository}"
     pr = request_json(f"{api_base}/pulls/{pr_number}", token)
-    comments = request_json(f"{api_base}/issues/{pr_number}/comments?per_page=100", token)
-    reviews = request_json(f"{api_base}/pulls/{pr_number}/reviews?per_page=100", token)
+    comments = request_json_items(f"{api_base}/issues/{pr_number}/comments", token)
+    reviews = request_json_items(f"{api_base}/pulls/{pr_number}/reviews", token)
     chunks = [pr.get("body") or ""]
     chunks.extend(comment.get("body") or "" for comment in comments)
     chunks.extend(review.get("body") or "" for review in reviews)
@@ -83,10 +99,10 @@ def collect_text(repository: str, pr_number: int, token: str) -> str:
 def unresolved_review_threads(repository: str, pr_number: int, token: str) -> list[dict]:
     owner, repo = repository.split("/", 1)
     query = """
-    query($owner: String!, $repo: String!, $number: Int!) {
+    query($owner: String!, $repo: String!, $number: Int!, $cursor: String) {
       repository(owner: $owner, name: $repo) {
         pullRequest(number: $number) {
-          reviewThreads(first: 100) {
+          reviewThreads(first: 100, after: $cursor) {
             nodes {
               id
               isResolved
@@ -103,24 +119,41 @@ def unresolved_review_threads(repository: str, pr_number: int, token: str) -> li
                 }
               }
             }
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
           }
         }
       }
     }
     """
-    payload = request_json(
-        "https://api.github.com/graphql",
-        token,
-        {"query": query, "variables": {"owner": owner, "repo": repo, "number": pr_number}},
-    )
-    nodes = (
-        payload.get("data", {})
-        .get("repository", {})
-        .get("pullRequest", {})
-        .get("reviewThreads", {})
-        .get("nodes", [])
-    )
-    return [node for node in nodes if not node.get("isResolved") and not node.get("isOutdated")]
+    unresolved: list[dict] = []
+    cursor = None
+
+    while True:
+        payload = request_json(
+            "https://api.github.com/graphql",
+            token,
+            {
+                "query": query,
+                "variables": {"owner": owner, "repo": repo, "number": pr_number, "cursor": cursor},
+            },
+        )
+        review_threads = (
+            payload.get("data", {})
+            .get("repository", {})
+            .get("pullRequest", {})
+            .get("reviewThreads", {})
+        )
+        nodes = review_threads.get("nodes", [])
+        unresolved.extend(
+            node for node in nodes if not node.get("isResolved") and not node.get("isOutdated")
+        )
+        page_info = review_threads.get("pageInfo") or {}
+        if not page_info.get("hasNextPage"):
+            return unresolved
+        cursor = page_info.get("endCursor")
 
 
 def validate(repository: str, pr_number: int, validation_result: str | None, token: str) -> GateResult:
