@@ -23,6 +23,17 @@ import type { NgxImageGalleryItem } from './gallery-types';
           />
         </a>
 
+        <a id="full-source-linked-photo" href="full-source-linked.jpg">
+          <img
+            src="full-source-linked.jpg"
+            srcset="full-source-linked-800.jpg 800w, full-source-linked-1600.jpg 1600w"
+            sizes="(min-width: 900px) 60vw, 100vw"
+            alt="Linked full source"
+            width="1600"
+            height="900"
+          />
+        </a>
+
         <img
           id="standalone-photo"
           src="standalone.jpg"
@@ -102,6 +113,26 @@ describe('NgxImageGalleryAutoDirective', () => {
       height: 900,
     });
     expect(link.querySelector('img')?.getAttribute('alt')).toBe('Linked mountain lake');
+  });
+
+  it('preserves responsive sources when a linked image is itself the full source', () => {
+    const link = fixture.nativeElement.querySelector(
+      '#full-source-linked-photo',
+    ) as HTMLAnchorElement;
+
+    click(link);
+    fixture.detectChanges();
+
+    expect(service.isOpen()).toBe(true);
+    expect(service.activeItem()).toMatchObject({
+      fullSrc: 'full-source-linked.jpg',
+      thumbSrc: 'full-source-linked.jpg',
+      alt: 'Linked full source',
+      srcset: 'full-source-linked-800.jpg 800w, full-source-linked-1600.jpg 1600w',
+      sizes: '(min-width: 900px) 60vw, 100vw',
+      width: 1600,
+      height: 900,
+    });
   });
 
   it('makes standalone images keyboard activatable with their alt text as the name', () => {
