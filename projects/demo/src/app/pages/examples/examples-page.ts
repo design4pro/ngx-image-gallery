@@ -6,6 +6,7 @@ import { HlmButtonImports } from '@demo/ui/button';
 import { HlmSeparatorImports } from '@demo/ui/separator';
 import { HlmTypographyImports } from '@demo/ui/typography';
 import { map } from 'rxjs';
+import { AutoDiscoveryGalleryExample } from '../../examples/auto-discovery-gallery-example';
 import { CssPropertiesGalleryExample } from '../../examples/css-properties-gallery-example';
 import { CustomContentGalleryExample } from '../../examples/custom-content-gallery-example';
 import { RouterCloseGalleryExample } from '../../examples/router-close-gallery-example';
@@ -13,7 +14,12 @@ import { TailwindGalleryExample } from '../../examples/tailwind-gallery-example'
 import { CodeBlock } from '../../shared/code-block/code-block';
 import { exampleCards } from '../../shared/docsite/docsite-data';
 
-type ExampleSlug = 'custom-properties' | 'tailwind' | 'custom-content' | 'router-close';
+type ExampleSlug =
+  | 'custom-properties'
+  | 'tailwind'
+  | 'custom-content'
+  | 'auto-discovery'
+  | 'router-close';
 
 const EXAMPLE_COPY: Record<
   ExampleSlug,
@@ -66,6 +72,19 @@ const EXAMPLE_COPY: Record<
   </ng-template>
 </button>`,
   },
+  'auto-discovery': {
+    eyebrow: 'Static markup',
+    title: 'Auto discovery',
+    description: 'Progressively enhance trusted article, markdown, or CMS-rendered image markup.',
+    language: 'html',
+    snippet: `<article ngxImageGallery ngxImageGalleryAuto>
+  <a href="/photos/full.jpg">
+    <img src="/photos/thumb.jpg" alt="Forest path after rain" />
+  </a>
+
+  <img src="/photos/standalone.jpg" alt="Harbor at sunrise" />
+</article>`,
+  },
   'router-close': {
     eyebrow: 'Router close',
     title: 'Close on navigation',
@@ -83,6 +102,7 @@ const EXAMPLE_COPY: Record<
   selector: 'app-examples-page',
   imports: [
     RouterLink,
+    AutoDiscoveryGalleryExample,
     CodeBlock,
     CssPropertiesGalleryExample,
     CustomContentGalleryExample,
@@ -132,6 +152,9 @@ const EXAMPLE_COPY: Record<
             }
             @case ('custom-content') {
               <app-custom-content-gallery-example />
+            }
+            @case ('auto-discovery') {
+              <app-auto-discovery-gallery-example />
             }
             @default {
               <app-css-properties-gallery-example />
@@ -185,7 +208,10 @@ export class ExamplesPage {
   protected readonly examples = exampleCards;
   protected readonly slug = computed<ExampleSlug>(() => {
     const slug = this.routeSlug();
-    return slug === 'tailwind' || slug === 'custom-content' || slug === 'router-close'
+    return slug === 'tailwind' ||
+      slug === 'custom-content' ||
+      slug === 'auto-discovery' ||
+      slug === 'router-close'
       ? slug
       : 'custom-properties';
   });

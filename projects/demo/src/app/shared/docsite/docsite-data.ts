@@ -61,6 +61,13 @@ export const exampleCards: ExampleCard[] = [
     image: 'https://picsum.photos/id/1067/960/720',
   },
   {
+    title: 'Auto discovery',
+    description:
+      'Enhance trusted article or CMS markup without adding item directives to each image.',
+    path: '/examples/auto-discovery',
+    image: 'https://picsum.photos/id/1011/960/720',
+  },
+  {
     title: 'Router close',
     description: 'Close an open lightbox when the application route changes.',
     path: '/examples/router-close',
@@ -332,6 +339,24 @@ export const photos: NgxImageGalleryItem[] = [
         title: 'Image URL boundary',
         body: 'Gallery image URLs are application-owned data. The library assigns only relative URLs, HTTP(S) URLs, blob URLs, and common raster data:image URLs for single image sources; unsafe schemes are ignored. Use relative, HTTP(S), or blob candidates in srcset because an unsafe candidate drops the whole srcset value.',
       },
+      {
+        title: 'Trusted markup enhancement',
+        body: 'Use ngxImageGalleryAuto on a trusted application-rendered gallery container when images already exist in article, markdown, CMS, or migration markup. It discovers current linked images and standalone images once, reuses the same lightbox service, and keeps explicit ngxImageGalleryItem markup as the preferred controlled API.',
+        code: {
+          language: 'html',
+          code: `<article ngxImageGallery ngxImageGalleryAuto>
+  <a href="/photos/full.jpg">
+    <img src="/photos/thumb.jpg" alt="Forest path after rain" />
+  </a>
+
+  <img src="/photos/standalone.jpg" alt="Harbor at sunrise" />
+</article>`,
+        },
+      },
+      {
+        title: 'Auto-discovery boundary',
+        body: 'The directive does not parse HTML strings, sanitize untrusted CMS content, observe future DOM mutations, support media types beyond images, or replace item directives for structured Angular templates.',
+      },
     ],
   },
   {
@@ -456,6 +481,10 @@ export const photos: NgxImageGalleryItem[] = [
       {
         title: 'Custom templates',
         body: 'When a custom lightbox template replaces default controls, the app owns those controls semantics. Prefer native buttons, label icon-only controls, expose changing counters with aria-live, and keep item alt text meaningful.',
+      },
+      {
+        title: 'Auto-discovered images',
+        body: 'Linked images keep their native link keyboard behavior and image alt text. Standalone images discovered by ngxImageGalleryAuto become focusable button-like controls and use their alt text as the accessible name when no ARIA name is already present.',
       },
       {
         title: 'Color contrast',
