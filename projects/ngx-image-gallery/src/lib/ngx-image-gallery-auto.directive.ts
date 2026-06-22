@@ -106,13 +106,14 @@ export class NgxImageGalleryAutoDirective implements AfterViewInit, OnDestroy {
     if (!fullSrc) {
       return null;
     }
+    const usesImageAsFullSource = !link || fullSrc === imageSrc;
 
     return {
       fullSrc,
       thumbSrc: imageSrc ?? fullSrc,
       alt: image.getAttribute('alt') ?? undefined,
-      srcset: readAttribute(image, 'srcset'),
-      sizes: readAttribute(image, 'sizes'),
+      srcset: usesImageAsFullSource ? readAttribute(image, 'srcset') : undefined,
+      sizes: usesImageAsFullSource ? readAttribute(image, 'sizes') : undefined,
       width: readPositiveNumberAttribute(image, 'width'),
       height: readPositiveNumberAttribute(image, 'height'),
     };

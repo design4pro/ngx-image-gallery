@@ -23,7 +23,24 @@ import type { NgxImageGalleryItem } from './gallery-types';
           />
         </a>
 
-        <img id="standalone-photo" src="standalone.jpg" alt="Standalone city skyline" />
+        <a id="full-source-linked-photo" href="full-source-linked.jpg">
+          <img
+            src="full-source-linked.jpg"
+            srcset="full-source-linked-800.jpg 800w, full-source-linked-1600.jpg 1600w"
+            sizes="(min-width: 900px) 60vw, 100vw"
+            alt="Linked full source"
+            width="1600"
+            height="900"
+          />
+        </a>
+
+        <img
+          id="standalone-photo"
+          src="standalone.jpg"
+          srcset="standalone-800.jpg 800w, standalone-1600.jpg 1600w"
+          sizes="(min-width: 800px) 50vw, 100vw"
+          alt="Standalone city skyline"
+        />
 
         <a id="download-photo" href="download.jpg" download>
           <img src="download-thumb.jpg" alt="Download only" />
@@ -81,7 +98,7 @@ describe('NgxImageGalleryAutoDirective', () => {
     document.body.innerHTML = '';
   });
 
-  it('discovers linked images and maps supported attributes to gallery items', () => {
+  it('discovers linked images without applying thumbnail responsive sources to full items', () => {
     const link = fixture.nativeElement.querySelector('#linked-photo') as HTMLAnchorElement;
 
     click(link);
@@ -92,12 +109,30 @@ describe('NgxImageGalleryAutoDirective', () => {
       fullSrc: 'full-linked.jpg',
       thumbSrc: 'thumb-linked.jpg',
       alt: 'Linked mountain lake',
-      srcset: 'full-linked-800.jpg 800w, full-linked-1600.jpg 1600w',
-      sizes: '(min-width: 800px) 50vw, 100vw',
       width: 1600,
       height: 900,
     });
     expect(link.querySelector('img')?.getAttribute('alt')).toBe('Linked mountain lake');
+  });
+
+  it('preserves responsive sources when a linked image is itself the full source', () => {
+    const link = fixture.nativeElement.querySelector(
+      '#full-source-linked-photo',
+    ) as HTMLAnchorElement;
+
+    click(link);
+    fixture.detectChanges();
+
+    expect(service.isOpen()).toBe(true);
+    expect(service.activeItem()).toMatchObject({
+      fullSrc: 'full-source-linked.jpg',
+      thumbSrc: 'full-source-linked.jpg',
+      alt: 'Linked full source',
+      srcset: 'full-source-linked-800.jpg 800w, full-source-linked-1600.jpg 1600w',
+      sizes: '(min-width: 900px) 60vw, 100vw',
+      width: 1600,
+      height: 900,
+    });
   });
 
   it('makes standalone images keyboard activatable with their alt text as the name', () => {
@@ -115,6 +150,8 @@ describe('NgxImageGalleryAutoDirective', () => {
       fullSrc: 'standalone.jpg',
       thumbSrc: 'standalone.jpg',
       alt: 'Standalone city skyline',
+      srcset: 'standalone-800.jpg 800w, standalone-1600.jpg 1600w',
+      sizes: '(min-width: 800px) 50vw, 100vw',
     });
   });
 
