@@ -8,13 +8,18 @@ import {
   input,
 } from '@angular/core';
 import type { NgxImageGalleryItem, NgxImageGalleryItemContentTemplate } from './gallery-types';
-import { NgxImageGalleryDirective } from './ngx-image-gallery.directive';
+import {
+  NgxImageGalleryDirective,
+  type NgxImageGalleryRegisteredItem,
+} from './ngx-image-gallery.directive';
 
 @Directive({
   selector: '[ngxImageGalleryItem]',
   standalone: true,
 })
-export class NgxImageGalleryItemDirective implements OnInit, OnDestroy {
+export class NgxImageGalleryItemDirective
+  implements OnInit, OnDestroy, NgxImageGalleryRegisteredItem
+{
   private readonly elementRef = inject<ElementRef<HTMLElement>>(ElementRef);
   private contentTemplate: NgxImageGalleryItemContentTemplate | null = null;
   private readonly parentGallery = inject(NgxImageGalleryDirective, {
