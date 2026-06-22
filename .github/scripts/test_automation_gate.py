@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import unittest
+from unittest.mock import patch
 
 import automation_gate
 
@@ -182,6 +183,15 @@ class AutomationGateDryRunTest(unittest.TestCase):
             any("PR Validation result is failure" in error for error in result.errors),
             result.errors,
         )
+
+    def test_graphql_errors_fail_thread_lookup(self) -> None:
+        with patch.object(
+            automation_gate,
+            "request_json",
+            return_value={"errors": [{"message": "Resource not accessible by integration"}]},
+        ):
+            with self.assertRaisesRegex(RuntimeError, "GitHub GraphQL returned errors"):
+                automation_gate.unresolved_review_threads("example/repo", 1, "token")
 
 
 if __name__ == "__main__":

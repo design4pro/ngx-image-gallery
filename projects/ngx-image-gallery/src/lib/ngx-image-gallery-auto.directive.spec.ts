@@ -42,6 +42,10 @@ import type { NgxImageGalleryItem } from './gallery-types';
           alt="Standalone city skyline"
         />
 
+        <img id="decorative-photo" src="decorative.jpg" alt="" />
+        <img id="missing-alt-photo" src="missing-alt.jpg" />
+        <img id="aria-label-photo" src="aria-label.jpg" aria-label="Aria labeled image" />
+
         <a id="download-photo" href="download.jpg" download>
           <img src="download-thumb.jpg" alt="Download only" />
         </a>
@@ -162,6 +166,39 @@ describe('NgxImageGalleryAutoDirective', () => {
     fixture.detectChanges();
 
     expect(service.activeItem()?.fullSrc).toBe('standalone.jpg');
+  });
+
+  it('skips standalone images without accessible names', () => {
+    const decorativeImage = fixture.nativeElement.querySelector(
+      '#decorative-photo',
+    ) as HTMLImageElement;
+    const missingAltImage = fixture.nativeElement.querySelector(
+      '#missing-alt-photo',
+    ) as HTMLImageElement;
+
+    expect(decorativeImage.hasAttribute('role')).toBe(false);
+    expect(decorativeImage.hasAttribute('tabindex')).toBe(false);
+    expect(missingAltImage.hasAttribute('role')).toBe(false);
+    expect(missingAltImage.hasAttribute('tabindex')).toBe(false);
+
+    click(decorativeImage);
+    keydown(missingAltImage, 'Enter');
+    fixture.detectChanges();
+
+    expect(service.isOpen()).toBe(false);
+  });
+
+  it('uses existing aria labels for standalone image activation', () => {
+    const image = fixture.nativeElement.querySelector('#aria-label-photo') as HTMLImageElement;
+
+    expect(image.getAttribute('role')).toBe('button');
+    expect(image.getAttribute('tabindex')).toBe('0');
+    expect(image.getAttribute('aria-label')).toBe('Aria labeled image');
+
+    click(image);
+    fixture.detectChanges();
+
+    expect(service.activeItem()?.fullSrc).toBe('aria-label.jpg');
   });
 
   it('does not add Space key activation to linked images', () => {

@@ -78,6 +78,9 @@ export class NgxImageGalleryAutoDirective implements AfterViewInit, OnDestroy {
       if (!galleryItem) {
         continue;
       }
+      if (!link && !this.hasStandaloneAccessibleName(image)) {
+        continue;
+      }
 
       const restore = link ? () => undefined : this.prepareStandaloneImage(image);
       const item = this.createDiscoveredItem(activationElement, galleryItem, restore, !link);
@@ -95,6 +98,14 @@ export class NgxImageGalleryAutoDirective implements AfterViewInit, OnDestroy {
   private getLinkedOrigin(image: HTMLImageElement): HTMLAnchorElement | null {
     const link = image.closest<HTMLAnchorElement>('a[href]');
     return link && this.elementRef.nativeElement.contains(link) ? link : null;
+  }
+
+  private hasStandaloneAccessibleName(image: HTMLImageElement): boolean {
+    return Boolean(
+      readAttribute(image, 'aria-label') ||
+      readAttribute(image, 'aria-labelledby') ||
+      readAttribute(image, 'alt'),
+    );
   }
 
   private createGalleryItem(
