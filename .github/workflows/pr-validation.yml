@@ -15,8 +15,6 @@ permissions:
   contents: read
   issues: read
   pull-requests: read
-  statuses: read
-  checks: read
 
 jobs:
   pr-validation:
