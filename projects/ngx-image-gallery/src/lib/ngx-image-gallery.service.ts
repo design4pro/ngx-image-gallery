@@ -216,6 +216,7 @@ export class NgxImageGalleryService {
 
       this.runtime = runtime;
       this.document.body.appendChild(elements.overlay);
+      elements.stage.focus({ preventScroll: true });
       this.applyModalPageState(runtime);
       this.bindOverlayEvents(runtime);
       this.renderVisibleSlides(runtime);
