@@ -127,6 +127,16 @@ describe('NgxImageGalleryAutoDirective', () => {
     expect(service.activeItem()?.fullSrc).toBe('standalone.jpg');
   });
 
+  it('does not add Space key activation to linked images', () => {
+    const link = fixture.nativeElement.querySelector('#linked-photo') as HTMLAnchorElement;
+
+    const event = keydown(link, ' ');
+    fixture.detectChanges();
+
+    expect(event.defaultPrevented).toBe(false);
+    expect(service.isOpen()).toBe(false);
+  });
+
   it('does not intercept download links', () => {
     const link = fixture.nativeElement.querySelector('#download-photo') as HTMLAnchorElement;
 
@@ -165,10 +175,12 @@ function click(target: Element | null): void {
   target.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
 }
 
-function keydown(target: Element | null, key: string): void {
+function keydown(target: Element | null, key: string): KeyboardEvent {
   if (!(target instanceof HTMLElement)) {
     throw new Error('Expected a keyboard target');
   }
 
-  target.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key }));
+  const event = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key });
+  target.dispatchEvent(event);
+  return event;
 }
