@@ -154,6 +154,10 @@ def unresolved_review_threads(repository: str, pr_number: int, token: str) -> li
                 "variables": {"owner": owner, "repo": repo, "number": pr_number, "cursor": cursor},
             },
         )
+        graphql_errors = payload.get("errors")
+        if graphql_errors:
+            raise RuntimeError(f"GitHub GraphQL returned errors: {json.dumps(graphql_errors)}")
+
         review_threads = (
             payload.get("data", {})
             .get("repository", {})
