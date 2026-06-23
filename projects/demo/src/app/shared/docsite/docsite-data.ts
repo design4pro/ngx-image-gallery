@@ -191,7 +191,7 @@ export const optionGroups: Array<{ title: string; options: ApiOption[] }> = [
     ],
   },
   {
-    title: 'Router close options',
+    title: 'Router options',
     options: [
       {
         name: 'closeOnNavigation',
@@ -205,6 +205,13 @@ export const optionGroups: Array<{ title: string; options: ApiOption[] }> = [
         defaultValue: 'true',
         description:
           'Closes the owned lightbox for browser history navigations when route-wide closing is disabled.',
+      },
+      {
+        name: 'ngxImageGalleryUrlState',
+        type: 'string | { galleryId: string }',
+        defaultValue: "''",
+        description:
+          'Opts a gallery into query-param state using a collision-safe gallery id and stable item ids.',
       },
     ],
   },
@@ -494,18 +501,39 @@ export const photos: NgxImageGalleryItem[] = [
   },
   {
     slug: 'router-close',
-    title: 'Router close',
-    description: 'Use a secondary entrypoint when route changes should close an open lightbox.',
+    title: 'Router integration',
+    description: 'Use a secondary entrypoint for route-close and opt-in shareable lightbox URLs.',
     sections: [
       {
+        title: 'Shareable lightbox URLs',
+        body: 'URL state is opt-in and uses query params. The gallery id is written to ngxGallery and the active item id is written to ngxGalleryItem. Items must provide stable ids; missing ids and unknown URL-targeted items do not fall back to indexes.',
+        code: {
+          language: 'html',
+          code: `<div
+  ngxImageGallery
+  ngxImageGalleryUrlState="product-gallery"
+>
+  @for (photo of photos; track photo.id) {
+    <a [href]="photo.fullSrc" [ngxImageGalleryItem]="photo">
+      <img [src]="photo.thumbSrc" [alt]="photo.alt" />
+    </a>
+  }
+</div>`,
+        },
+      },
+      {
+        title: 'URL history behavior',
+        body: 'Opening the lightbox from user interaction pushes query-param state. Next, previous, and goTo updates replace the current URL state. Closing the lightbox clears the gallery URL state. Use a distinct gallery id for each URL-synced gallery on the same route.',
+      },
+      {
         title: 'Close on navigation',
-        body: 'Router close is opt-in. It does not write query params or open slides from the URL; it only closes the gallery-owned lightbox when Router navigation starts.',
+        body: 'Router close is opt-in. It closes the gallery-owned lightbox when Router navigation starts. When combining it with URL state, keep closeOnNavigation false and closeOnHistoryBack true so URL push/replace updates do not immediately close the lightbox while browser back still closes it.',
         code: {
           language: 'html',
           code: `<div
   ngxImageGallery
   [ngxImageGalleryCloseOnNavigation]="{
-    closeOnNavigation: true,
+    closeOnNavigation: false,
     closeOnHistoryBack: true,
   }"
 >
@@ -522,10 +550,13 @@ export const photos: NgxImageGalleryItem[] = [
         body: 'The router integration is outside the primary entrypoint so core gallery consumers do not need Router.',
         code: {
           language: 'ts',
-          code: `import { NgxImageGalleryCloseOnNavigationDirective } from '@design4pro/ngx-image-gallery/router';
+          code: `import {
+  NgxImageGalleryCloseOnNavigationDirective,
+  NgxImageGalleryUrlStateDirective,
+} from '@design4pro/ngx-image-gallery/router';
 
 readonly closeOnNavigation = {
-  closeOnNavigation: true,
+  closeOnNavigation: false,
   closeOnHistoryBack: true,
 };`,
         },
