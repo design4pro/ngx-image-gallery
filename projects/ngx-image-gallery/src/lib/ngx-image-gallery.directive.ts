@@ -1,8 +1,17 @@
 import { Directive, ElementRef, OnDestroy, inject, input, signal } from '@angular/core';
 import { NgxImageGalleryService } from './ngx-image-gallery.service';
-import type { NgxImageGalleryItem, NgxImageGalleryOpenOptions } from './gallery-types';
-import type { NgxImageGalleryItemDirective } from './ngx-image-gallery-item.directive';
+import type {
+  NgxImageGalleryItem,
+  NgxImageGalleryItemContentTemplate,
+  NgxImageGalleryOpenOptions,
+} from './gallery-types';
 import type { NgxImageGalleryLightboxDirective } from './ngx-image-gallery-lightbox.directive';
+
+export interface NgxImageGalleryRegisteredItem {
+  readonly originElement: HTMLElement;
+  readonly galleryItem: NgxImageGalleryItem;
+  readonly itemContentTemplate?: NgxImageGalleryItemContentTemplate;
+}
 
 @Directive({
   selector: '[ngxImageGallery]',
@@ -13,7 +22,7 @@ export class NgxImageGalleryDirective implements OnDestroy {
   private readonly elementRef = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly gallery = inject(NgxImageGalleryService);
   private readonly owner = {};
-  private readonly itemDirectives: NgxImageGalleryItemDirective[] = [];
+  private readonly itemDirectives: NgxImageGalleryRegisteredItem[] = [];
   private readonly itemsVersionState = signal(0);
   readonly itemsVersion = this.itemsVersionState.asReadonly();
   private isItemsVersionUpdateQueued = false;
@@ -22,14 +31,14 @@ export class NgxImageGalleryDirective implements OnDestroy {
 
   readonly ngxImageGallery = input<Partial<NgxImageGalleryOpenOptions> | ''>('');
 
-  register(item: NgxImageGalleryItemDirective): void {
+  register(item: NgxImageGalleryRegisteredItem): void {
     if (!this.itemDirectives.includes(item)) {
       this.itemDirectives.push(item);
       this.queueItemsVersionUpdate();
     }
   }
 
-  unregister(item: NgxImageGalleryItemDirective): void {
+  unregister(item: NgxImageGalleryRegisteredItem): void {
     const index = this.itemDirectives.indexOf(item);
     if (index >= 0) {
       this.itemDirectives.splice(index, 1);
@@ -83,7 +92,7 @@ export class NgxImageGalleryDirective implements OnDestroy {
     );
   }
 
-  openItem(item: NgxImageGalleryItemDirective, event?: MouseEvent): void {
+  openItem(item: NgxImageGalleryRegisteredItem, event?: Event): void {
     const itemDirectives = this.getOrderedItemDirectives();
     const index = itemDirectives.indexOf(item);
     if (index < 0) {
@@ -142,7 +151,7 @@ export class NgxImageGalleryDirective implements OnDestroy {
     });
   }
 
-  private getOrderedItemDirectives(): NgxImageGalleryItemDirective[] {
+  private getOrderedItemDirectives(): NgxImageGalleryRegisteredItem[] {
     return [...this.itemDirectives].sort((first, second) => {
       if (first === second) {
         return 0;
@@ -173,7 +182,7 @@ export class NgxImageGalleryDirective implements OnDestroy {
   }
 
   private getItemsFromDirectives(
-    itemDirectives: readonly NgxImageGalleryItemDirective[],
+    itemDirectives: readonly NgxImageGalleryRegisteredItem[],
   ): NgxImageGalleryItem[] {
     return itemDirectives.map((item) => item.galleryItem);
   }

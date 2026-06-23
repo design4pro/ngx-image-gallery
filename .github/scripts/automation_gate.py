@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import ssl
 import sys
 import urllib.error
@@ -20,7 +21,10 @@ except ImportError:  # pragma: no cover - GitHub-hosted runners use system trust
 
 
 REQUIRED_MARKERS = ("PM ASSIGNMENT", "DEV COMPLETE", "QA RESULT: PASS")
-SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where() if certifi else None)
+SHA_MARKERS = ("DEV COMPLETE", "QA RESULT: PASS")
+SHA_RE = r"\b[0-9a-fA-F]{7,40}\b"
+EVIDENCE_BOUNDARY = "\n\n--- ceo-orchestrator-evidence-boundary ---\n\n"
+SSL_CONTEXT: ssl.SSLContext | None = None
 
 
 @dataclass
@@ -30,7 +34,17 @@ class GateResult:
     warnings: list[str]
 
 
+@dataclass
+class PullRequestEvidence:
+    head_sha: str
+    text: str
+
+
 def request_json(url: str, token: str, payload: dict | None = None) -> Any:
+    global SSL_CONTEXT
+    if SSL_CONTEXT is None:
+        SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where() if certifi else None)
+
     data = None if payload is None else json.dumps(payload).encode()
     request = urllib.request.Request(
         url,
@@ -85,7 +99,7 @@ def resolve_pr_number(event: dict) -> int:
     raise RuntimeError("Unable to resolve pull request number from event or PR_NUMBER.")
 
 
-def collect_text(repository: str, pr_number: int, token: str) -> str:
+def collect_pr_evidence(repository: str, pr_number: int, token: str) -> PullRequestEvidence:
     api_base = f"https://api.github.com/repos/{repository}"
     pr = request_json(f"{api_base}/pulls/{pr_number}", token)
     comments = request_json_items(f"{api_base}/issues/{pr_number}/comments", token)
@@ -93,7 +107,7 @@ def collect_text(repository: str, pr_number: int, token: str) -> str:
     chunks = [pr.get("body") or ""]
     chunks.extend(comment.get("body") or "" for comment in comments)
     chunks.extend(review.get("body") or "" for review in reviews)
-    return "\n\n".join(chunks)
+    return PullRequestEvidence(head_sha=pr.get("head", {}).get("sha") or "", text=EVIDENCE_BOUNDARY.join(chunks))
 
 
 def unresolved_review_threads(repository: str, pr_number: int, token: str) -> list[dict]:
@@ -140,6 +154,10 @@ def unresolved_review_threads(repository: str, pr_number: int, token: str) -> li
                 "variables": {"owner": owner, "repo": repo, "number": pr_number, "cursor": cursor},
             },
         )
+        graphql_errors = payload.get("errors")
+        if graphql_errors:
+            raise RuntimeError(f"GitHub GraphQL returned errors: {json.dumps(graphql_errors)}")
+
         review_threads = (
             payload.get("data", {})
             .get("repository", {})
@@ -156,19 +174,66 @@ def unresolved_review_threads(repository: str, pr_number: int, token: str) -> li
         cursor = page_info.get("endCursor")
 
 
-def validate(repository: str, pr_number: int, validation_result: str | None, token: str) -> GateResult:
+def extract_marker_shas(text: str, marker: str) -> list[str]:
+    shas: list[str] = []
+    marker_start = 0
+    while True:
+        marker_index = text.find(marker, marker_start)
+        if marker_index == -1:
+            return shas
+        next_marker_indexes = [
+            text.find(next_marker, marker_index + len(marker))
+            for next_marker in REQUIRED_MARKERS
+            if next_marker != marker
+        ]
+        next_marker_indexes = [index for index in next_marker_indexes if index != -1]
+        boundary_index = text.find(EVIDENCE_BOUNDARY, marker_index + len(marker))
+        block_end_candidates = [*next_marker_indexes]
+        if boundary_index != -1:
+            block_end_candidates.append(boundary_index)
+        block_end = min(block_end_candidates) if block_end_candidates else len(text)
+        block = text[marker_index:block_end]
+        shas.extend(match.group(0).lower() for match in re.finditer(SHA_RE, block))
+        marker_start = marker_index + len(marker)
+
+
+def sha_matches_head(candidate: str, head_sha: str) -> bool:
+    candidate = candidate.lower()
+    head_sha = head_sha.lower()
+    return head_sha.startswith(candidate) or candidate.startswith(head_sha)
+
+
+def validate_evidence(
+    evidence: PullRequestEvidence,
+    validation_result: str | None,
+    unresolved: list[dict],
+) -> GateResult:
     errors: list[str] = []
     warnings: list[str] = []
 
     if validation_result and validation_result != "success":
         errors.append(f"PR Validation result is {validation_result}, expected success.")
 
-    text = collect_text(repository, pr_number, token)
+    present_markers = {marker for marker in REQUIRED_MARKERS if marker in evidence.text}
     for marker in REQUIRED_MARKERS:
-        if marker not in text:
+        if marker not in present_markers:
             errors.append(f"Missing required automation marker: {marker}")
 
-    unresolved = unresolved_review_threads(repository, pr_number, token)
+    if not evidence.head_sha:
+        errors.append("Unable to resolve pull request head SHA.")
+    else:
+        for marker in SHA_MARKERS:
+            if marker not in present_markers:
+                continue
+            marker_shas = extract_marker_shas(evidence.text, marker)
+            if not marker_shas:
+                errors.append(f"Missing commit SHA evidence for marker: {marker}")
+            elif not any(sha_matches_head(sha, evidence.head_sha) for sha in marker_shas):
+                errors.append(
+                    f"{marker} SHA evidence does not match PR head {evidence.head_sha}: "
+                    f"{', '.join(sorted(set(marker_shas)))}"
+                )
+
     for thread in unresolved:
         comment = (thread.get("comments", {}).get("nodes") or [{}])[0]
         url = comment.get("url") or thread.get("id")
@@ -179,6 +244,12 @@ def validate(repository: str, pr_number: int, validation_result: str | None, tok
         warnings.append("No unresolved review threads found.")
 
     return GateResult(ok=not errors, errors=errors, warnings=warnings)
+
+
+def validate(repository: str, pr_number: int, validation_result: str | None, token: str) -> GateResult:
+    evidence = collect_pr_evidence(repository, pr_number, token)
+    unresolved = unresolved_review_threads(repository, pr_number, token)
+    return validate_evidence(evidence, validation_result, unresolved)
 
 
 def main() -> int:

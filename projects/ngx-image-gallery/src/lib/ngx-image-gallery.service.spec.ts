@@ -657,6 +657,33 @@ describe('NgxImageGalleryService', () => {
     expect(page.getAttribute('aria-hidden')).toBe('false');
   });
 
+  it('moves focus out of page siblings before hiding them from assistive technology', () => {
+    const page = document.createElement('main');
+    const opener = document.createElement('button');
+    const activeElementsWhenHidden: Element[] = [];
+    const originalSetAttribute = page.setAttribute.bind(page);
+    opener.type = 'button';
+    page.appendChild(opener);
+    document.body.appendChild(page);
+    opener.focus();
+
+    vi.spyOn(page, 'setAttribute').mockImplementation((name: string, value: string) => {
+      if (name === 'aria-hidden' && value === 'true' && document.activeElement) {
+        activeElementsWhenHidden.push(document.activeElement);
+      }
+
+      originalSetAttribute(name, value);
+    });
+
+    service.open([{ fullSrc: 'full-1.jpg', thumbSrc: 'thumb-1.jpg' }], 0);
+
+    const overlay = document.querySelector<HTMLElement>('.ngx-image-gallery-overlay');
+
+    expect(activeElementsWhenHidden).toHaveLength(1);
+    expect(page.contains(activeElementsWhenHidden[0])).toBe(false);
+    expect(overlay?.contains(activeElementsWhenHidden[0])).toBe(true);
+  });
+
   it('does not restore focus to a disconnected origin element', () => {
     const opener = document.createElement('button');
     opener.type = 'button';
