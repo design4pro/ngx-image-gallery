@@ -10,6 +10,7 @@ import {
 import {
   NgxImageGalleryCloseOnNavigationDirective,
   type NgxImageGalleryCloseOnNavigationOptions,
+  NgxImageGalleryUrlStateDirective,
 } from '@design4pro/ngx-image-gallery/router';
 import { DEMO_PHOTOS } from './demo-photos';
 
@@ -22,11 +23,13 @@ import { DEMO_PHOTOS } from './demo-photos';
     NgxImageGalleryDirective,
     NgxImageGalleryItemDirective,
     NgxImageGalleryCloseOnNavigationDirective,
+    NgxImageGalleryUrlStateDirective,
   ],
   template: `
     <section class="grid gap-5" aria-label="Router close gallery demo">
       <div class="flex flex-wrap items-center gap-2">
         <span hlmBadge variant="outline">Router close</span>
+        <span hlmBadge variant="outline">URL state</span>
         <a hlmBtn variant="outline" size="sm" routerLink="/examples/custom-properties">
           Change route
         </a>
@@ -35,6 +38,7 @@ import { DEMO_PHOTOS } from './demo-photos';
 
       <div
         ngxImageGallery
+        ngxImageGalleryUrlState="router-close-demo"
         [ngxImageGallery]="options"
         [ngxImageGalleryCloseOnNavigation]="closeOnNavigation"
         class="grid grid-cols-1 gap-3 sm:grid-cols-3"
@@ -66,7 +70,7 @@ export class RouterCloseGalleryExample {
   protected readonly photos = DEMO_PHOTOS.slice(3);
 
   protected readonly closeOnNavigation: NgxImageGalleryCloseOnNavigationOptions = {
-    closeOnNavigation: true,
+    closeOnNavigation: false,
     closeOnHistoryBack: true,
   };
 
