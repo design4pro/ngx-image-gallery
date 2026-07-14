@@ -1,4 +1,4 @@
-import { Directive, computed, effect, inject, input, signal } from '@angular/core';
+import { Directive, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, type ParamMap } from '@angular/router';
 import {
@@ -107,7 +107,7 @@ export class NgxImageGalleryUrlStateDirective {
 
     if (
       this.gallery.ownsActiveLightbox() &&
-      this.galleryService.activeItem()?.id === queryState.itemId
+      untracked(() => this.galleryService.activeItem()?.id) === queryState.itemId
     ) {
       this.wasOwnedOpen = true;
       return;
