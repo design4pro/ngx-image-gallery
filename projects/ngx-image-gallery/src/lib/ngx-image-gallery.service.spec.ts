@@ -52,6 +52,7 @@ class FakeImage {
   static naturalWidthValue = 2400;
   static naturalHeightValue = 1200;
   static shouldError = false;
+  static loadDelay = 0;
 
   onload: (() => void) | null = null;
   onerror: (() => void) | null = null;
@@ -80,7 +81,7 @@ class FakeImage {
       }
 
       this.onload?.();
-    }, 0);
+    }, FakeImage.loadDelay);
   }
 
   get srcset(): string {
@@ -104,6 +105,7 @@ describe('NgxImageGalleryService', () => {
     FakeImage.naturalWidthValue = 2400;
     FakeImage.naturalHeightValue = 1200;
     FakeImage.shouldError = false;
+    FakeImage.loadDelay = 0;
     destroyedCustomContentCount = 0;
     originalAnimationFrame = window.requestAnimationFrame;
     window.requestAnimationFrame = (callback: FrameRequestCallback): number => {
@@ -148,6 +150,29 @@ describe('NgxImageGalleryService', () => {
     vi.advanceTimersByTime(333);
 
     expect(FakeImage.requests).toEqual(['full-1.jpg']);
+  });
+
+  it('mounts the full image hidden while it loads and reveals the same element', async () => {
+    FakeImage.loadDelay = 100;
+
+    service.open([
+      { fullSrc: 'full-1.jpg', thumbSrc: 'thumb-1.jpg' },
+      { fullSrc: 'full-2.jpg', thumbSrc: 'thumb-2.jpg' },
+    ]);
+    vi.advanceTimersByTime(333);
+
+    const loadingImage = document.querySelector<HTMLImageElement>(
+      '.ngx-image-gallery-slide-current .ngx-image-gallery-full',
+    );
+    expect(loadingImage).toBeTruthy();
+    expect(loadingImage?.classList.contains('ngx-image-gallery-loaded')).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(100);
+
+    expect(document.querySelector('.ngx-image-gallery-slide-current .ngx-image-gallery-full')).toBe(
+      loadingImage,
+    );
+    expect(loadingImage?.classList.contains('ngx-image-gallery-loaded')).toBe(true);
   });
 
   it('starts opening from the thumbnail transform before animating to the fitted layout', () => {
@@ -307,6 +332,31 @@ describe('NgxImageGalleryService', () => {
 
     expect(service.activeIndex()).toBe(1);
     expect(FakeImage.requests).toEqual(['full-1.jpg', 'full-2.jpg']);
+  });
+
+  it('keeps the incoming image slide mounted when it becomes active', () => {
+    service.open(
+      [
+        { fullSrc: 'full-1.jpg', thumbSrc: 'thumb-1.jpg' },
+        { fullSrc: 'full-2.jpg', thumbSrc: 'thumb-2.jpg' },
+      ],
+      0,
+    );
+    vi.advanceTimersByTime(333);
+
+    const incomingSlide = document.querySelector<HTMLDivElement>('.ngx-image-gallery-slide-next');
+
+    service.next();
+    vi.advanceTimersByTime(220);
+
+    expect(document.querySelector('.ngx-image-gallery-slide-current')).toBe(incomingSlide);
+
+    const returningSlide = document.querySelector<HTMLDivElement>('.ngx-image-gallery-slide-prev');
+
+    service.previous();
+    vi.advanceTimersByTime(220);
+
+    expect(document.querySelector('.ngx-image-gallery-slide-current')).toBe(returningSlide);
   });
 
   it('renders custom item content without loading an image for that slide', () => {
