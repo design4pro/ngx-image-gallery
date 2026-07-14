@@ -7,33 +7,39 @@ export interface LoadedImage {
 }
 
 export interface ImageLoader {
-  load(item: NgxImageGalleryItem & { fullSrc: string }): Promise<LoadedImage>;
+  load(
+    item: NgxImageGalleryItem & { fullSrc: string },
+    image?: HTMLImageElement,
+  ): Promise<LoadedImage>;
 }
 
 export class BrowserImageLoader implements ImageLoader {
-  load(item: NgxImageGalleryItem & { fullSrc: string }): Promise<LoadedImage> {
-    return new Promise<LoadedImage>((resolve, reject) => {
-      const image = new Image();
+  load(
+    item: NgxImageGalleryItem & { fullSrc: string },
+    image?: HTMLImageElement,
+  ): Promise<LoadedImage> {
+    const target = image ?? new Image();
 
-      image.onload = () => {
+    return new Promise<LoadedImage>((resolve, reject) => {
+      target.onload = () => {
         resolve({
-          width: image.naturalWidth || image.width,
-          height: image.naturalHeight || image.height,
-          src: image.currentSrc || image.src,
+          width: target.naturalWidth || target.width,
+          height: target.naturalHeight || target.height,
+          src: target.currentSrc || target.src,
         });
       };
-      image.onerror = () => {
+      target.onerror = () => {
         reject(new Error(`Failed to load image: ${item.fullSrc}`));
       };
 
       if (item.sizes) {
-        image.sizes = item.sizes;
+        target.sizes = item.sizes;
       }
       if (item.srcset) {
-        image.srcset = item.srcset;
+        target.srcset = item.srcset;
       }
 
-      image.src = item.fullSrc;
+      target.src = item.fullSrc;
     });
   }
 }
