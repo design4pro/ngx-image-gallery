@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import axe from 'axe-core';
+import { BrowserImageLoader } from './image-loader';
 import { NgxImageGalleryService } from './ngx-image-gallery.service';
 import {
   provideNgxImageGallery,
@@ -112,6 +113,45 @@ describe('NgxImageGalleryService', () => {
       callback(0);
       return 1;
     };
+    const imageSrcSetter = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src')?.set;
+    const imageSrcsetSetter = Object.getOwnPropertyDescriptor(
+      HTMLImageElement.prototype,
+      'srcset',
+    )?.set;
+    vi.spyOn(HTMLImageElement.prototype, 'src', 'set').mockImplementation(function (
+      this: HTMLImageElement,
+      value,
+    ) {
+      imageSrcSetter?.call(this, value);
+      if (!this.classList.contains('ngx-image-gallery-full') || !this.onload) {
+        return;
+      }
+
+      Object.defineProperties(this, {
+        naturalWidth: { configurable: true, value: FakeImage.naturalWidthValue },
+        naturalHeight: { configurable: true, value: FakeImage.naturalHeightValue },
+        currentSrc: { configurable: true, value },
+      });
+      FakeImage.requests.push(value);
+      window.setTimeout(() => {
+        const event = new Event(FakeImage.shouldError ? 'error' : 'load');
+        if (FakeImage.shouldError) {
+          this.onerror?.(event);
+          return;
+        }
+
+        this.onload?.(event);
+      }, FakeImage.loadDelay);
+    });
+    vi.spyOn(HTMLImageElement.prototype, 'srcset', 'set').mockImplementation(function (
+      this: HTMLImageElement,
+      value,
+    ) {
+      imageSrcsetSetter?.call(this, value);
+      if (this.classList.contains('ngx-image-gallery-full') && this.onload) {
+        FakeImage.srcsets.push(value);
+      }
+    });
     vi.stubGlobal('Image', FakeImage);
 
     TestBed.configureTestingModule({
@@ -127,6 +167,7 @@ describe('NgxImageGalleryService', () => {
   afterEach(() => {
     service.close(false);
     window.requestAnimationFrame = originalAnimationFrame;
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
     vi.useRealTimers();
     document.body.innerHTML = '';
@@ -154,6 +195,7 @@ describe('NgxImageGalleryService', () => {
 
   it('mounts the full image hidden while it loads and reveals the same element', async () => {
     FakeImage.loadDelay = 100;
+    const loadSpy = vi.spyOn(BrowserImageLoader.prototype, 'load');
 
     service.open([
       { fullSrc: 'full-1.jpg', thumbSrc: 'thumb-1.jpg' },
@@ -166,6 +208,8 @@ describe('NgxImageGalleryService', () => {
     );
     expect(loadingImage).toBeTruthy();
     expect(loadingImage?.classList.contains('ngx-image-gallery-loaded')).toBe(false);
+    expect(loadSpy).toHaveBeenCalledWith(expect.any(Object), loadingImage);
+    expect(FakeImage.requests).toEqual(['full-1.jpg']);
 
     await vi.advanceTimersByTimeAsync(100);
 

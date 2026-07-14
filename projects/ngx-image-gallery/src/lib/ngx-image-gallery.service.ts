@@ -811,13 +811,20 @@ export class NgxImageGalleryService {
     return 'ngx-image-gallery-slide ngx-image-gallery-slide-current';
   }
 
-  private createFullImage(slide: SlideRuntime, loaded: boolean): HTMLImageElement {
+  private createFullImage(
+    slide: SlideRuntime,
+    loaded: boolean,
+    assignSource = true,
+  ): HTMLImageElement {
     const image = this.document.createElement('img');
     image.className = loaded
       ? 'ngx-image-gallery-image ngx-image-gallery-full ngx-image-gallery-loaded'
       : 'ngx-image-gallery-image ngx-image-gallery-full';
     image.alt = slide.item.alt ?? '';
     image.draggable = false;
+    if (!assignSource) {
+      return image;
+    }
     if (slide.item.sizes) {
       image.sizes = slide.item.sizes;
     }
@@ -1080,18 +1087,21 @@ export class NgxImageGalleryService {
 
     slide.fullLoading = true;
     if (slide.elements && !slide.elements.fullImage) {
-      slide.elements.fullImage = this.createFullImage(slide, false);
+      slide.elements.fullImage = this.createFullImage(slide, false, false);
       slide.elements.media.appendChild(slide.elements.fullImage);
     }
     this.updateUi(runtime);
 
     const safeSrcset = this.resolveSafeImageSrcset(slide.item.srcset);
     this.imageLoader
-      .load({
-        ...slide.item,
-        fullSrc: safeFullSrc,
-        srcset: safeSrcset,
-      })
+      .load(
+        {
+          ...slide.item,
+          fullSrc: safeFullSrc,
+          srcset: safeSrcset,
+        },
+        slide.elements?.fullImage ?? undefined,
+      )
       .then((loaded) => {
         if (this.runtime !== runtime) {
           return;

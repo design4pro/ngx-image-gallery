@@ -7,14 +7,18 @@ export interface LoadedImage {
 }
 
 export interface ImageLoader {
-  load(item: NgxImageGalleryItem & { fullSrc: string }): Promise<LoadedImage>;
+  load(
+    item: NgxImageGalleryItem & { fullSrc: string },
+    image?: HTMLImageElement,
+  ): Promise<LoadedImage>;
 }
 
 export class BrowserImageLoader implements ImageLoader {
-  load(item: NgxImageGalleryItem & { fullSrc: string }): Promise<LoadedImage> {
+  load(
+    item: NgxImageGalleryItem & { fullSrc: string },
+    image = new Image(),
+  ): Promise<LoadedImage> {
     return new Promise<LoadedImage>((resolve, reject) => {
-      const image = new Image();
-
       image.onload = () => {
         resolve({
           width: image.naturalWidth || image.width,
