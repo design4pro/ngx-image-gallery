@@ -167,6 +167,29 @@ describe('NgxImageGalleryUrlStateDirective', () => {
     });
   });
 
+  it('does not reopen the URL item while replacing state after slide navigation', async () => {
+    createFixture();
+    openGallery(0);
+    await flushEffects();
+    queryParamMap.next(
+      convertToParamMap({
+        ngxGallery: 'product-gallery',
+        ngxGalleryItem: 'first',
+      }),
+    );
+    await flushEffects();
+    const reopenSpy = vi.spyOn(service, 'open');
+
+    service.next();
+    vi.advanceTimersByTime(1000);
+    fixture.detectChanges();
+    await flushEffects();
+
+    expect(service.isOpen()).toBe(true);
+    expect(service.activeItem()?.id).toBe('second');
+    expect(reopenSpy).not.toHaveBeenCalled();
+  });
+
   it('clears owned URL state when the gallery closes', async () => {
     queryParamMap.next(
       convertToParamMap({
