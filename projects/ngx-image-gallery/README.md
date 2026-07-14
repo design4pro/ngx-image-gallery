@@ -188,7 +188,7 @@ export interface NgxImageGalleryItem {
 | `width`        | Known full-size image width. Optional; the gallery can infer dimensions.                                    |
 | `height`       | Known full-size image height. Optional; the gallery can infer dimensions.                                   |
 | `thumbCropped` | Controls whether the opening animation treats the rendered thumbnail as cropped.                            |
-| `id`           | Stable item identifier. Required when using shareable URL state.                                            |
+| `id`           | Optional stable item identifier for application logic.                                                      |
 | `data`         | Application-owned metadata, available to custom slide templates.                                            |
 
 ### Programmatic open and close
@@ -379,56 +379,22 @@ import {
   NgxImageGalleryDirective,
   NgxImageGalleryItemDirective,
 } from '@design4pro/ngx-image-gallery';
-import {
-  NgxImageGalleryCloseOnNavigationDirective,
-  NgxImageGalleryUrlStateDirective,
-} from '@design4pro/ngx-image-gallery/router';
+import { NgxImageGalleryCloseOnNavigationDirective } from '@design4pro/ngx-image-gallery/router';
 
 @Component({
   imports: [
     NgxImageGalleryDirective,
     NgxImageGalleryItemDirective,
     NgxImageGalleryCloseOnNavigationDirective,
-    NgxImageGalleryUrlStateDirective,
   ],
   // ...
 })
 export class ProductGalleryComponent {}
 ```
 
-### Shareable lightbox URLs
-
-Add `ngxImageGalleryUrlState` with a unique gallery ID. Every item in a URL-synchronized gallery must also have a stable, non-empty `id`.
-
-```angular
-<div
-  ngxImageGallery
-  ngxImageGalleryUrlState="product-gallery"
-  [ngxImageGalleryCloseOnNavigation]="{
-    closeOnNavigation: false,
-    closeOnHistoryBack: true,
-  }"
->
-  @for (photo of photos; track photo.id) {
-    <a [href]="photo.fullSrc" [ngxImageGalleryItem]="photo">
-      <img [src]="photo.thumbSrc" [alt]="photo.alt" />
-    </a>
-  }
-</div>
-```
-
-The directive uses two query parameters:
-
-- `ngxGallery` identifies the gallery.
-- `ngxGalleryItem` identifies the active item.
-
-Opening from user interaction pushes URL state. Moving between items replaces the current state, and closing clears state owned by that gallery. Existing unrelated query parameters are preserved. URL entries with missing or unknown item IDs do not fall back to numeric indexes.
-
-Use a distinct gallery ID for every URL-synchronized gallery on the same route. When URL state and close-on-navigation are combined, keep `closeOnNavigation: false` so the directive's own query-param updates do not close the lightbox; `closeOnHistoryBack: true` still closes it during browser history navigation.
-
 ### Close on route changes
 
-For a gallery without URL synchronization, a bare directive closes its lightbox on every Angular Router navigation, including browser history navigation:
+A bare directive closes its lightbox on every Angular Router navigation, including browser history navigation:
 
 ```html
 <div ngxImageGallery ngxImageGalleryCloseOnNavigation>
