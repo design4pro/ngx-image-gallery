@@ -710,14 +710,27 @@ export class NgxImageGalleryService {
     runtime.cleanup.push(() => target.removeEventListener(eventName, listener, options));
   }
 
-  private renderVisibleSlides(runtime: GalleryRuntime): void {
+  private renderVisibleSlides(
+    runtime: GalleryRuntime,
+    preservedCurrentSlide: RenderedSlideElements | null = null,
+  ): void {
     this.destroyRenderedSlides(runtime);
     runtime.elements.track.textContent = '';
     runtime.elements.track.style.transition = '';
     runtime.elements.track.style.transform = 'translate3d(0, 0, 0)';
 
     this.createVisibleSlide(runtime, -1);
-    this.createVisibleSlide(runtime, 0);
+    if (preservedCurrentSlide) {
+      const slide = runtime.slides[runtime.activeIndex];
+      preservedCurrentSlide.slide.className = this.getSlideClassName(0);
+      preservedCurrentSlide.slide.removeAttribute('aria-hidden');
+      preservedCurrentSlide.slide.setAttribute('aria-label', this.getSlideLabel(runtime, slide));
+      slide.elements = preservedCurrentSlide;
+      runtime.elements.track.appendChild(preservedCurrentSlide.slide);
+      this.applyMediaLayout(slide, runtime, 'instant');
+    } else {
+      this.createVisibleSlide(runtime, 0);
+    }
     this.createVisibleSlide(runtime, 1);
     this.updateUi(runtime);
   }
@@ -798,13 +811,20 @@ export class NgxImageGalleryService {
     return 'ngx-image-gallery-slide ngx-image-gallery-slide-current';
   }
 
-  private createFullImage(slide: SlideRuntime, loaded: boolean): HTMLImageElement {
+  private createFullImage(
+    slide: SlideRuntime,
+    loaded: boolean,
+    assignSource = true,
+  ): HTMLImageElement {
     const image = this.document.createElement('img');
     image.className = loaded
       ? 'ngx-image-gallery-image ngx-image-gallery-full ngx-image-gallery-loaded'
       : 'ngx-image-gallery-image ngx-image-gallery-full';
     image.alt = slide.item.alt ?? '';
     image.draggable = false;
+    if (!assignSource) {
+      return image;
+    }
     if (slide.item.sizes) {
       image.sizes = slide.item.sizes;
     }
@@ -1066,15 +1086,22 @@ export class NgxImageGalleryService {
     }
 
     slide.fullLoading = true;
+    if (slide.elements && !slide.elements.fullImage) {
+      slide.elements.fullImage = this.createFullImage(slide, false, false);
+      slide.elements.media.appendChild(slide.elements.fullImage);
+    }
     this.updateUi(runtime);
 
     const safeSrcset = this.resolveSafeImageSrcset(slide.item.srcset);
     this.imageLoader
-      .load({
-        ...slide.item,
-        fullSrc: safeFullSrc,
-        srcset: safeSrcset,
-      })
+      .load(
+        {
+          ...slide.item,
+          fullSrc: safeFullSrc,
+          srcset: safeSrcset,
+        },
+        slide.elements?.fullImage ?? undefined,
+      )
       .then((loaded) => {
         if (this.runtime !== runtime) {
           return;
@@ -1089,6 +1116,10 @@ export class NgxImageGalleryService {
 
         slide.fullLoading = false;
         slide.fullError = true;
+        slide.elements?.fullImage?.remove();
+        if (slide.elements) {
+          slide.elements.fullImage = null;
+        }
         this.updateUi(runtime);
       });
   }
@@ -1607,18 +1638,45 @@ export class NgxImageGalleryService {
         return;
       }
 
-      this.activateIndex(runtime, nextIndex);
+      this.activateIndex(runtime, nextIndex, delta > 0 ? 1 : -1);
     }, NAVIGATION_DURATION_MS);
   }
 
-  private activateIndex(runtime: GalleryRuntime, index: number): void {
+  private activateIndex(runtime: GalleryRuntime, index: number, incomingPosition?: -1 | 1): void {
+    const incomingSlideCandidate = incomingPosition
+      ? this.getRenderedImageSlide(runtime, incomingPosition)
+      : null;
+    const incomingSlide =
+      runtime.slides[index].fullLoaded && !incomingSlideCandidate?.fullImage
+        ? null
+        : incomingSlideCandidate;
     runtime.activeIndex = index;
     runtime.isNavigating = false;
     runtime.pointers.clear();
     runtime.gesture = null;
-    this.renderVisibleSlides(runtime);
+    this.renderVisibleSlides(runtime, incomingSlide);
     this.updateState(runtime);
     this.loadActiveFullImage(runtime);
+  }
+
+  private getRenderedImageSlide(
+    runtime: GalleryRuntime,
+    position: -1 | 1,
+  ): RenderedSlideElements | null {
+    const className =
+      position < 0 ? 'ngx-image-gallery-slide-prev' : 'ngx-image-gallery-slide-next';
+    const slide = runtime.elements.track.querySelector<HTMLDivElement>(`.${className}`);
+    const media = slide?.querySelector<HTMLDivElement>('.ngx-image-gallery-media');
+    if (!slide || !media || media.classList.contains('ngx-image-gallery-media-custom')) {
+      return null;
+    }
+
+    return {
+      slide,
+      media,
+      thumbImage: media.querySelector<HTMLImageElement>('.ngx-image-gallery-thumb'),
+      fullImage: media.querySelector<HTMLImageElement>('.ngx-image-gallery-full'),
+    };
   }
 
   private resetTrack(runtime: GalleryRuntime): void {
