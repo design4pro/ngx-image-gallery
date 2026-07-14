@@ -16,28 +16,30 @@ export interface ImageLoader {
 export class BrowserImageLoader implements ImageLoader {
   load(
     item: NgxImageGalleryItem & { fullSrc: string },
-    image = new Image(),
+    image?: HTMLImageElement,
   ): Promise<LoadedImage> {
+    const target = image ?? new Image();
+
     return new Promise<LoadedImage>((resolve, reject) => {
-      image.onload = () => {
+      target.onload = () => {
         resolve({
-          width: image.naturalWidth || image.width,
-          height: image.naturalHeight || image.height,
-          src: image.currentSrc || image.src,
+          width: target.naturalWidth || target.width,
+          height: target.naturalHeight || target.height,
+          src: target.currentSrc || target.src,
         });
       };
-      image.onerror = () => {
+      target.onerror = () => {
         reject(new Error(`Failed to load image: ${item.fullSrc}`));
       };
 
       if (item.sizes) {
-        image.sizes = item.sizes;
+        target.sizes = item.sizes;
       }
       if (item.srcset) {
-        image.srcset = item.srcset;
+        target.srcset = item.srcset;
       }
 
-      image.src = item.fullSrc;
+      target.src = item.fullSrc;
     });
   }
 }
