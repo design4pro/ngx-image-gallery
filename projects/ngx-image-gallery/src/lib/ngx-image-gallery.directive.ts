@@ -1,4 +1,4 @@
-import { Directive, ElementRef, OnDestroy, inject, input, signal } from '@angular/core';
+import { Directive, ElementRef, OnDestroy, inject, input } from '@angular/core';
 import { NgxImageGalleryService } from './ngx-image-gallery.service';
 import type {
   NgxImageGalleryItem,
@@ -23,10 +23,6 @@ export class NgxImageGalleryDirective implements OnDestroy {
   private readonly gallery = inject(NgxImageGalleryService);
   private readonly owner = {};
   private readonly itemDirectives: NgxImageGalleryRegisteredItem[] = [];
-  private readonly itemsVersionState = signal(0);
-  readonly itemsVersion = this.itemsVersionState.asReadonly();
-  private isItemsVersionUpdateQueued = false;
-  private isDestroyed = false;
   private lightboxDirective: NgxImageGalleryLightboxDirective | null = null;
 
   readonly ngxImageGallery = input<Partial<NgxImageGalleryOpenOptions> | ''>('');
@@ -34,7 +30,6 @@ export class NgxImageGalleryDirective implements OnDestroy {
   register(item: NgxImageGalleryRegisteredItem): void {
     if (!this.itemDirectives.includes(item)) {
       this.itemDirectives.push(item);
-      this.queueItemsVersionUpdate();
     }
   }
 
@@ -42,7 +37,6 @@ export class NgxImageGalleryDirective implements OnDestroy {
     const index = this.itemDirectives.indexOf(item);
     if (index >= 0) {
       this.itemDirectives.splice(index, 1);
-      this.queueItemsVersionUpdate();
     }
   }
 
@@ -57,7 +51,6 @@ export class NgxImageGalleryDirective implements OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.isDestroyed = true;
     this.gallery.closeOwnedBy(this.owner, false);
     this.itemDirectives.length = 0;
     this.lightboxDirective = null;
@@ -135,20 +128,6 @@ export class NgxImageGalleryDirective implements OnDestroy {
           lightboxViewContainer: this.lightboxDirective.viewContainerRef,
         }
       : {};
-  }
-
-  private queueItemsVersionUpdate(): void {
-    if (this.isItemsVersionUpdateQueued) {
-      return;
-    }
-
-    this.isItemsVersionUpdateQueued = true;
-    queueMicrotask(() => {
-      this.isItemsVersionUpdateQueued = false;
-      if (!this.isDestroyed) {
-        this.itemsVersionState.update((version) => version + 1);
-      }
-    });
   }
 
   private getOrderedItemDirectives(): NgxImageGalleryRegisteredItem[] {
